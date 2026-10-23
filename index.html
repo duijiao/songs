@@ -101,6 +101,38 @@ details.rawd{margin-top:14px;color:var(--muted);font-size:13px}
 pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#0b1220;color:#dbeafe;padding:14px;border-radius:10px;max-height:340px;overflow:auto;font-size:12.5px}
 .foot{font-size:12px;color:var(--muted);text-align:center;margin-top:18px}
 
+/* loading */
+.progress{position:fixed;left:0;right:0;top:0;height:3px;z-index:200;overflow:hidden;pointer-events:none}
+.progress::before{content:"";position:absolute;inset:0;width:40%;background:linear-gradient(90deg,transparent,#60a5fa,#2563eb,transparent);animation:slide 1.1s ease-in-out infinite}
+@keyframes slide{0%{transform:translateX(-100%)}100%{transform:translateX(250%)}}
+@keyframes sweep{to{transform:translateX(100%)}}
+@keyframes shimmer{0%{background-position:120% 0}100%{background-position:-120% 0}}
+@keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@keyframes dots{0%{content:""}25%{content:"."}50%{content:".."}75%{content:"..."}}
+.song{animation:rise .35s ease-out backwards;animation-delay:var(--d,0ms)}
+.loading-note{grid-column:1/-1;display:flex;align-items:center;justify-content:center;gap:10px;padding:14px 12px 4px;color:var(--muted);font-size:14px}
+.spinner{width:20px;height:20px;border:3px solid #cbd5e6;border-top-color:var(--blue);border-radius:50%;animation:spin .8s linear infinite;flex:none}
+.dots::after{content:"";animation:dots 1.2s steps(1) infinite}
+.skel .thumb{cursor:default}
+.skel .thumb::after,.skel .ln{background:linear-gradient(100deg,transparent 0%,#ffffff99 50%,transparent 100%) 0 0/200% 100%;animation:shimmer 1.4s linear infinite}
+.skel .thumb::after{content:"";position:absolute;inset:0}
+.skel .ln{height:14px;border-radius:7px;background-color:var(--soft)}
+.skel .ln.s{width:55%}.skel .ln.xs{width:35%;height:12px}
+.skel .thumb{background:var(--soft)}
+.thumb:not(.ok):not(.err):not(.noimg)::after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(100deg,transparent 30%,#ffffff8c 50%,transparent 70%);transform:translateX(-100%);animation:sweep 1.5s ease-in-out infinite}
+.thumb .tmsg{z-index:1}
+.searchbar button:disabled,#moreBtn:disabled{opacity:.85;cursor:progress}
+.searchbar button:disabled::before,#moreBtn:disabled::before{content:"";display:inline-block;width:15px;height:15px;margin-right:8px;border:2.5px solid #ffffff66;border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;vertical-align:-2px}
+#moreBtn:disabled::before{border-color:#2563eb44;border-top-color:var(--blue)}
+@media (prefers-color-scheme:dark){
+  .thumb:not(.ok):not(.err)::after,.skel .thumb::after,.skel .ln{filter:opacity(.18)}
+  .skel .ln{background-color:#1c2845}
+}
+@media (prefers-reduced-motion:reduce){
+  .song,.progress::before,.thumb::after,.skel .ln,.spinner,.dots::after{animation:none!important}
+  .progress::before{width:100%}
+}
+
 /* lightbox */
 .pg-badge{position:absolute;left:8px;top:8px;background:#000a;color:#fff;border-radius:999px;font-size:12px;padding:2px 9px;z-index:1}
 .lb{position:fixed;inset:0;z-index:100;background:#05080ff2;display:flex;flex-direction:column;color:#fff;user-select:none;-webkit-user-select:none}
@@ -144,6 +176,7 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#0b1220;color:#dbeafe
 </style>
 </head>
 <body>
+<div class="progress" id="progress" hidden></div>
 <header class="top" id="top">
   <div class="top-in">
     <div class="brand">
@@ -564,6 +597,24 @@ function getRowImage(r, page=0, force=false){
   return getImageUrl(Number(r.id), force);
 }
 
+/* ============== 加载动效 ============== */
+function setProgress(on){ $('progress').hidden=!on; }
+function skelCard(){
+  return `<article class="song skel" aria-hidden="true"><div class="thumb"></div><div class="info"><div class="ln"></div><div class="ln s"></div><div class="ln xs"></div></div></article>`;
+}
+function loadingNote(label){ return `<div class="loading-note" role="status"><span class="spinner"></span><span>${label}<span class="dots"></span></span></div>`; }
+function showSkeleton(label,n=6){
+  $('results').innerHTML = loadingNote(label) + Array.from({length:n},skelCard).join('');
+  setProgress(true);
+}
+function appendSkeleton(label,n=3){   // 「加载更多」时追加到列表末尾
+  clearSkeleton();
+  $('results').insertAdjacentHTML('beforeend',
+    '<div class="skel-more" style="display:contents">'+loadingNote(label)+Array.from({length:n},skelCard).join('')+'</div>');
+  setProgress(true);
+}
+function clearSkeleton(){ document.querySelectorAll('#results .skel-more').forEach(e=>e.remove()); }
+
 /* ============== 赞美网接口 ============== */
 const AZM_PS=10;
 let azmMode='song'; // song | scripture（仅赞美网接口下可用）
@@ -581,7 +632,8 @@ function normalizeAzm(it){
     name:it.mTitle||it.mTabName||it.title||it.name||'',
     bookName:(it.mSongbook||it.songbook||'').replace(/[《》]/g,''), artist:it.mArtistName||it.artist||'', category:it.mTags||it.tags||'',
     images:imgs.length?imgs:undefined,   // undefined = 尚未加载图片，需要时按 id 取
-    detailUrl:it.detail_url||'', tabName:it.mTabName||'', key:it.mKey||it.key||it.tone||'' };
+    detailUrl:it.detail_url||it.score_url||it.song_url||it.url||'', tabName:it.mTabName||(it.score_id?(it.title||''):''),
+    key:it.mKey||it.key||it.tone||'', date:it.time_signature||'' };
 }
 function refreshVarCount(i){
   const g=latestResults[i], el=document.querySelector(`.song[data-i="${i}"] .vcnt`);
@@ -615,9 +667,17 @@ function flattenAzm(list,parent){
   for(const it of list||[]){
     if(!it||typeof it!=='object') continue;
     const sub=pickArr(it,['scores','sheets','items']);
-    if(sub&&!it.mTabId){ out.push(...flattenAzm(sub,it)); continue; }
+    if(sub&&!it.mTabId){
+      if(sub.length){ out.push(...flattenAzm(sub,it)); }
+      else if(it.song_id||it.id){   // 该歌曲暂无歌谱：保留卡片，提供原页链接
+        const nm=it.mTitle||it.title||it.name||'';
+        if(nm) out.push({ _src:'azm', id:0, _sid:String(it.song_id||it.id), name:nm, _songName:nm, images:[], detailUrl:it.song_url||it.detail_url||'', _noScore:true });
+      }
+      continue;
+    }
     const r=normalizeAzm(it);
     if(!r.name&&parent) r.name=parent.mTitle||parent.title||parent.name||'';
+    if(!r.detailUrl&&parent) r.detailUrl=parent.song_url||parent.detail_url||'';
     r._songName=(parent&&(parent.mTitle||parent.title||parent.name))||r.name;
     if(!r.id) continue;
     out.push(r);
@@ -660,9 +720,9 @@ async function searchAzm(keyword, page=1, scorePage=1){
   if(first){
     gen = ++searchGen; queue.length=0; latestResults=[]; azmState.seen=new Set(); azmState.groups=new Map();
     $('resultTitle').textContent='正在搜索…';
-    $('results').innerHTML=`<div class="empty">${scr?'正在检索经文关联的歌曲与歌谱…':'正在请求赞美网歌谱…'}</div>`;
+    showSkeleton(scr?`正在检索「${escapeHtml(keyword)}」关联的歌曲与歌谱`:'正在请求赞美网歌谱');
     $('exportBtn').disabled=true; $('moreWrap').hidden=true; $('rawBox').hidden=true;
-  }
+  }else{ appendSkeleton('正在加载更多歌谱'); }
   azmState.loading=true; $('searchBtn').disabled=true; $('moreBtn').disabled=true;
   showStatus(first?'搜索中，请稍候…':`正在加载更多…`);
   try{
@@ -671,18 +731,22 @@ async function searchAzm(keyword, page=1, scorePage=1){
       : azmUrl('',{q:keyword,page,page_size:AZM_PS,include_images:0});
     const data=await azmGet(url);
     if(gen!==searchGen) return;
+    clearSkeleton();
     let rows=extractAzmRows(data);
     const rawCount=rows.length;
+    const songsArr=Array.isArray(data.songs)?data.songs:(data.data&&Array.isArray(data.data.songs)?data.data.songs:null);
+    const respPs=numOf(data.page_size,data.data&&data.data.page_size)||AZM_PS;
     const touched=new Set();
     if(scr){   // 同一首歌的不同谱合并成一张卡片（跨页也合并）
       const fresh=[];
       rows.forEach(r=>{
-        if(azmState.seen.has(r.id)) return;
-        azmState.seen.add(r.id);
+        const sk=r.id||('s'+r._sid);
+        if(azmState.seen.has(sk)) return;
+        azmState.seen.add(sk);
         const key=(r._songName||r.name||String(r.id)).replace(/\s+/g,'').toLowerCase();
         let g=azmState.groups.get(key);
         if(!g){ g={_src:'azm',id:r.id,name:r._songName||r.name,variants:[r],_v:0}; azmState.groups.set(key,g); fresh.push(g); }
-        else { g.variants.push(r); touched.add(g); }
+        else if(!r._noScore){ g.variants.push(r); touched.add(g); }
       });
       rows=fresh;
     }
@@ -691,13 +755,16 @@ async function searchAzm(keyword, page=1, scorePage=1){
     const pg=data.pagination||(data.data&&data.data.pagination)||{};
     const songTotal=numOf(data.total_pages,pg.total_pages,pg.totalPages,data.data&&data.data.total_pages);
     const hm=data.has_more??pg.has_more;
-    const songMore = songTotal!=null ? page<songTotal : (hm!=null ? !!hm : rawCount>=AZM_PS);
+    const songCount = songsArr ? songsArr.length : rawCount;
+    const songMore = songTotal!=null ? page<songTotal : (hm!=null ? !!hm : songCount>=respPs);
     let next=null, done;
     if(scr){
       const sp=data.score_pagination||data.scores_pagination||(data.data&&data.data.score_pagination)||{};
       const scoreTotal=numOf(data.score_total_pages,data.scores_total_pages,sp.total_pages,sp.totalPages);
       const shm=data.score_has_more??sp.has_more;
-      const scoreMore = scoreTotal!=null ? scorePage<scoreTotal : (shm!=null ? !!shm : rawCount>=AZM_PS);
+      // 接口没有顶层歌谱分页字段时，看每首歌自己的 score_total_pages
+      const perSong = songsArr ? songsArr.some(x=>{ const t=numOf(x.score_total_pages), p=numOf(x.score_page)||scorePage; return t!=null && p<t; }) : false;
+      const scoreMore = scoreTotal!=null ? scorePage<scoreTotal : (shm!=null ? !!shm : (songsArr ? perSong : rawCount>=AZM_PS));
       if(scoreMore) next={page,scorePage:scorePage+1};
       else if(songMore) next={page:page+1,scorePage:1};
       done=!next;
@@ -721,11 +788,13 @@ async function searchAzm(keyword, page=1, scorePage=1){
     showStatus(refLabel + (!latestResults.length ? (scr?'没有找到该经文关联的歌谱，请检查写法（如 约翰福音3:16），或展开下方原始响应排查。':'没有找到结果，可尝试更短的歌名关键词。')
       : rows.length===0&&!touched.size?'没有更多结果了。':'列表已加载，歌谱图片滚动到可见时自动按 id 加载；点击图片可放大。'));
   }catch(err){
+    clearSkeleton();
     if(gen!==searchGen) return;
     if(first){ latestResults=[]; $('resultTitle').textContent='搜索未完成'; $('results').innerHTML='<div class="empty">请求失败，请查看顶部提示。</div>'; }
     showStatus('错误：'+(err?.message||String(err)));
   }finally{
     azmState.loading=false; $('searchBtn').disabled=false; $('moreBtn').disabled=false;
+    clearSkeleton(); setProgress(false);
   }
 }
 
@@ -759,7 +828,7 @@ async function fetchLibrary(force=false){
 async function searchLib(keyword){
   const gen=++searchGen; queue.length=0; latestResults=[];
   $('resultTitle').textContent='正在搜索…';
-  $('results').innerHTML='<div class="empty">正在读取诗歌库…</div>';
+  showSkeleton('正在读取诗歌库');
   $('exportBtn').disabled=true; $('moreWrap').hidden=true; $('searchBtn').disabled=true;
   showStatus('搜索中…');
   try{
@@ -779,7 +848,7 @@ async function searchLib(keyword){
     latestResults=[]; $('resultTitle').textContent='搜索未完成';
     $('results').innerHTML='<div class="empty">请求失败，请查看顶部提示。</div>';
     showStatus('错误：'+(err?.message||String(err))+'\n常见原因：地址或 key 不对、表权限（RLS）未开放读取。');
-  }finally{ if(gen===searchGen) $('searchBtn').disabled=false; }
+  }finally{ if(gen===searchGen){ $('searchBtn').disabled=false; setProgress(false); } }
 }
 function showLocalLyrics(r){
   currentLyricsText=r.lyrics||'';
@@ -822,13 +891,14 @@ async function fetchAzmRows(keyword,page=1){
 async function searchAll(keyword){
   const gen=++searchGen; queue.length=0; latestResults=[]; azmState.done=true; azmState.q=keyword; azmState.page=1; azmState.next={page:2,scorePage:1};
   $('resultTitle').textContent='正在搜索…';
-  $('results').innerHTML='<div class="empty">正在同时搜索诗歌库、诗歌本、赞美网…</div>';
+  showSkeleton('正在同时搜索诗歌库、诗歌本、赞美网');
   $('exportBtn').disabled=true; $('moreWrap').hidden=true; $('searchBtn').disabled=true;
   showStatus('正在同时搜索三个来源…');
   const addGroup=(label,rows)=>{
     if(gen!==searchGen||!rows.length) return;
     rows[0]._groupLabel=label; rows[0]._groupCount=rows.length;
     const from=latestResults.length;
+    if(from===0) $('results').innerHTML='';   // 第一组结果到达时去掉骨架屏
     latestResults=latestResults.concat(rows);
     renderRows(latestResults,from);
     $('resultTitle').textContent=`搜索结果（${latestResults.length} 条）`;
@@ -845,7 +915,7 @@ async function searchAll(keyword){
     catch(e){ if(gen!==searchGen) return; summary.push(`${label} ✕`); errors.push(`${label}：${e?.message||e}`); }
   }));
   if(gen!==searchGen) return;
-  $('searchBtn').disabled=false;
+  $('searchBtn').disabled=false; setProgress(false);
   if(!latestResults.length){
     $('resultTitle').textContent='没有找到结果';
     $('results').innerHTML='<div class="empty">三个来源都没有结果，可尝试更短的关键词。</div>';
@@ -875,11 +945,11 @@ function renderRows(rows, from=0){
     const c = cur(r) || r;
     const extra = [c.bookName, c.artist, c.category].filter(Boolean);
     const head = r._groupLabel ? `<div class="group-h">${escapeHtml(r._groupLabel)}${r._groupCount!=null?`<span class="cnt">${r._groupCount} 条</span>`:''}</div>` : '';
-    return head + `<article class="song" data-i="${i}">
-      <div class="thumb" data-i="${i}">
+    return head + `<article class="song" data-i="${i}" style="--d:${Math.min(k,8)*45}ms">
+      <div class="thumb${r._noScore?' noimg':''}" data-i="${i}">
         <img alt="${escapeHtml(name)}" decoding="async" referrerpolicy="no-referrer">
         ${c.images && c.images.length > 1 ? `<span class="pg-badge">${c.images.length} 页</span>` : ''}
-        <div class="tmsg">等待加载…</div>
+        <div class="tmsg">${r._noScore?'该歌曲暂无歌谱<br>可点「原页」查看':'等待加载…'}</div>
         <span class="zoom-badge">🔍 点击放大</span>
       </div>
       <div class="info">
@@ -917,6 +987,7 @@ async function loadThumb(fig, gen, force=false){
   const msg = fig.querySelector('.tmsg');
   const img = fig.querySelector('img');
   fig.classList.remove('err','ok');
+  if (row && row._noScore) return;
   if (!hasImg(row)) { fig.classList.add('err'); msg.textContent = '无图片'; return; }
   fig.classList.add('loading'); msg.textContent = '加载中…';
   try {
@@ -958,7 +1029,7 @@ async function search(){
   if (!deviceSignId) await registerDevice();
   $('searchBtn').disabled = true;
   $('resultTitle').textContent = '正在搜索…';
-  $('results').innerHTML = '<div class="empty">正在请求歌谱目录…</div>';
+  showSkeleton('正在请求歌谱目录');
   $('exportBtn').disabled = true;
   showStatus('搜索中…');
   try {
@@ -980,7 +1051,7 @@ async function search(){
     $('resultTitle').textContent = '搜索未完成';
     $('results').innerHTML = '<div class="empty">请求失败，请查看顶部提示。</div>';
     showStatus('错误：' + (err?.message || String(err)) + '\n常见原因：API 不可用、跨域限制、登录权限不足、设备签名失败。');
-  } finally { if (gen === searchGen) $('searchBtn').disabled = false; }
+  } finally { if (gen === searchGen) { $('searchBtn').disabled = false; setProgress(false); } }
 }
 
 /* ============== 大图查看器（缩放 / 拖动 / 双击 / 切换） ============== */
@@ -1278,7 +1349,7 @@ $('sizeSel').addEventListener('change', ()=>{ applySize(); saveSettings(); });
 document.querySelectorAll('#srcSeg button').forEach(b=>b.addEventListener('click', ()=>{
   if (b.dataset.src === source) return;
   source = b.dataset.src; applySource(); saveSettings();
-  searchGen++; latestResults = []; queue.length = 0;
+  searchGen++; latestResults = []; queue.length = 0; setProgress(false); $('searchBtn').disabled = false;
   $('results').innerHTML = '<div class="empty">已切换到' + ({all:'全部来源',azm:'赞美网',lib:'诗歌库',hymn:'诗歌本'}[source]) + '接口，输入歌名开始搜索。</div>';
   $('resultTitle').textContent = '搜索结果'; $('exportBtn').disabled = true; $('moreWrap').hidden = true; $('rawBox').hidden = true;
   showStatus('已切换接口。');
@@ -1289,7 +1360,7 @@ $('azmModeBar').addEventListener('click', e=>{
   const b = e.target.closest('button[data-mode]');
   if (!b || b.dataset.mode === azmMode) return;
   azmMode = b.dataset.mode; applySource(); saveSettings();
-  searchGen++; latestResults = []; queue.length = 0;
+  searchGen++; latestResults = []; queue.length = 0; setProgress(false); $('searchBtn').disabled = false;
   $('results').innerHTML = '<div class="empty">' + (azmMode==='scripture' ? '请输入经文（如 约翰福音3:16），检索与该经文相关的歌谱。' : '输入歌名开始搜索。') + '</div>';
   $('resultTitle').textContent = '搜索结果'; $('exportBtn').disabled = true; $('moreWrap').hidden = true; $('rawBox').hidden = true;
   if ($('keyword').value.trim()) search();
