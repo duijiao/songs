@@ -43,6 +43,12 @@ input:focus,select:focus{border-color:var(--blue);box-shadow:0 0 0 3px #2563eb22
 .seg button svg{width:22px;height:22px;flex:none}
 .seg button:hover{background:#2563eb14}
 .seg button.on{background:linear-gradient(135deg,#3b82f6,var(--blue-d));color:#fff;box-shadow:0 6px 14px #2563eb44}
+.lb-vars{display:flex;align-items:center;gap:6px;overflow-x:auto;scrollbar-width:none;padding:8px 12px;background:#0b1220cc;z-index:2;border-top:1px solid #ffffff14}
+.lb-vars .vl{color:#9fb0cc;font-size:13px;flex:none;font-weight:650}
+.lb-vars button{background:#ffffff1f;padding:6px 13px;font-size:13px;white-space:nowrap;flex:none}
+.lb-vars button.on{background:var(--blue);box-shadow:0 0 0 2px #93c5fd66}
+.lb-tip{position:absolute;left:50%;top:12px;transform:translateX(-50%);background:#2563ebf2;color:#fff;padding:9px 14px;border-radius:12px;font-size:13px;line-height:1.5;z-index:3;max-width:92%;text-align:center;pointer-events:none;transition:opacity .6s;box-shadow:0 6px 20px #0006}
+.lb-tip.fade{opacity:0}
 .seg.sub{margin-top:10px;padding:4px}
 .seg.sub button{padding:7px 18px;font-size:14px}
 .group-h{grid-column:1/-1;display:flex;align-items:center;gap:10px;font-weight:700;font-size:15px;margin:12px 2px 0}
@@ -264,12 +270,15 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#0b1220;color:#dbeafe
 <div class="lb" id="lb" hidden>
   <div class="lb-bar">
     <div class="lb-title" id="lbTitle"></div>
+    <button id="lbVar" type="button" hidden>谱 1/2</button>
     <button id="lbPage" type="button" hidden>1/2 页</button>
     <button id="lbLyrics" type="button">歌词</button>
     <button id="lbOpen" type="button" class="hide-m">新窗口原图</button>
     <button id="lbClose" type="button">✕ 关闭</button>
   </div>
+  <div class="lb-vars" id="lbVars" hidden></div>
   <div class="lb-stage" id="lbStage">
+    <div class="lb-tip" id="lbTip" hidden></div>
     <img id="lbImg" alt="歌谱原图" draggable="false" referrerpolicy="no-referrer">
     <div class="lb-msg" id="lbMsg"></div>
     <button class="lb-nav lb-prev" id="lbPrev" type="button" aria-label="上一首">‹</button>
@@ -538,10 +547,12 @@ function getImageUrl(id, force=false){
 }
 
 /* ============== 统一图片入口（两种接口） ============== */
-function hasImg(r){ return !!r && (r.images ? r.images.length>0 : Number(r.id)>0); }
+function cur(r){ return r && r.variants ? r.variants[r._v||0] : r; }   // 经文检索：同一首歌的多个谱，cur 取当前选中的谱
+function hasImg(r){ r=cur(r); return !!r && (r.images ? r.images.length>0 : Number(r.id)>0); }
 // 诗歌库的歌曲有多张图（多个调）时，默认显示第二张
 function defPage(r){ return r && r._src==='lib' && r.images && r.images.length>1 ? 1 : 0; }
 function getRowImage(r, page=0, force=false){
+  r = cur(r);
   if (r._src==='azm' && !r.images) {
     if (force) r._imgP = null;
     return ensureAzmImages(r).then(imgs=>{
@@ -556,7 +567,7 @@ function getRowImage(r, page=0, force=false){
 /* ============== 赞美网接口 ============== */
 const AZM_PS=10;
 let azmMode='song'; // song | scripture（仅赞美网接口下可用）
-const azmState={q:'',page:0,next:{page:2,scorePage:1},done:true,loading:false,seen:new Set()};
+const azmState={q:'',page:0,next:{page:2,scorePage:1},done:true,loading:false,seen:new Set(),groups:new Map()};
 
 function extractImgUrls(o){
   if(!o||typeof o!=='object') return [];
@@ -570,7 +581,16 @@ function normalizeAzm(it){
     name:it.mTitle||it.mTabName||it.title||it.name||'',
     bookName:(it.mSongbook||it.songbook||'').replace(/[《》]/g,''), artist:it.mArtistName||it.artist||'', category:it.mTags||it.tags||'',
     images:imgs.length?imgs:undefined,   // undefined = 尚未加载图片，需要时按 id 取
-    detailUrl:it.detail_url||'' };
+    detailUrl:it.detail_url||'', tabName:it.mTabName||'', key:it.mKey||it.key||it.tone||'' };
+}
+function refreshVarCount(i){
+  const g=latestResults[i], el=document.querySelector(`.song[data-i="${i}"] .vcnt`);
+  if(el&&g&&g.variants){ el.textContent=`共 ${g.variants.length} 个谱`; el.hidden=g.variants.length<2; }
+}
+function variantLabel(g,k){
+  const v=g.variants[k];
+  const parts=[v.tabName&&v.tabName!==g.name?v.tabName:'', v.key, v.bookName, v.artist, v.category].filter(Boolean);
+  return (k+1)+'. '+(parts.slice(0,2).join(' · ')||'谱');
 }
 function azmUrl(path,params){
   const u=new URL($('azmBase').value.trim());
@@ -598,6 +618,7 @@ function flattenAzm(list,parent){
     if(sub&&!it.mTabId){ out.push(...flattenAzm(sub,it)); continue; }
     const r=normalizeAzm(it);
     if(!r.name&&parent) r.name=parent.mTitle||parent.title||parent.name||'';
+    r._songName=(parent&&(parent.mTitle||parent.title||parent.name))||r.name;
     if(!r.id) continue;
     out.push(r);
   }
@@ -637,7 +658,7 @@ async function searchAzm(keyword, page=1, scorePage=1){
   const first = page===1 && scorePage===1;
   let gen = searchGen;
   if(first){
-    gen = ++searchGen; queue.length=0; latestResults=[]; azmState.seen=new Set();
+    gen = ++searchGen; queue.length=0; latestResults=[]; azmState.seen=new Set(); azmState.groups=new Map();
     $('resultTitle').textContent='正在搜索…';
     $('results').innerHTML=`<div class="empty">${scr?'正在检索经文关联的歌曲与歌谱…':'正在请求赞美网歌谱…'}</div>`;
     $('exportBtn').disabled=true; $('moreWrap').hidden=true; $('rawBox').hidden=true;
@@ -652,7 +673,19 @@ async function searchAzm(keyword, page=1, scorePage=1){
     if(gen!==searchGen) return;
     let rows=extractAzmRows(data);
     const rawCount=rows.length;
-    if(scr){ rows=rows.filter(r=>!azmState.seen.has(r.id)); rows.forEach(r=>azmState.seen.add(r.id)); }
+    const touched=new Set();
+    if(scr){   // 同一首歌的不同谱合并成一张卡片（跨页也合并）
+      const fresh=[];
+      rows.forEach(r=>{
+        if(azmState.seen.has(r.id)) return;
+        azmState.seen.add(r.id);
+        const key=(r._songName||r.name||String(r.id)).replace(/\s+/g,'').toLowerCase();
+        let g=azmState.groups.get(key);
+        if(!g){ g={_src:'azm',id:r.id,name:r._songName||r.name,variants:[r],_v:0}; azmState.groups.set(key,g); fresh.push(g); }
+        else { g.variants.push(r); touched.add(g); }
+      });
+      rows=fresh;
+    }
 
     // 分页判断
     const pg=data.pagination||(data.data&&data.data.pagination)||{};
@@ -676,8 +709,9 @@ async function searchAzm(keyword, page=1, scorePage=1){
     const from=latestResults.length;
     latestResults=latestResults.concat(rows);
     azmState.q=keyword; azmState.page=page; azmState.next=next||{page:page+1,scorePage:1}; azmState.done=done;
-    $('resultTitle').textContent=`${scr?'经文歌谱':'搜索结果'}（${latestResults.length} 条）`;
+    $('resultTitle').textContent=scr?`经文歌谱（${latestResults.length} 首 / ${azmState.seen.size} 个谱）`:`搜索结果（${latestResults.length} 条）`;
     renderRows(latestResults, from);
+    touched.forEach(g=>{ const k=latestResults.indexOf(g); if(k>=0&&k<from) refreshVarCount(k); });
     $('exportBtn').disabled=!latestResults.length;
     $('moreWrap').hidden=done||!latestResults.length;
     if(scr&&!latestResults.length){
@@ -685,7 +719,7 @@ async function searchAzm(keyword, page=1, scorePage=1){
     }
     const refLabel = scr && typeof (data.reference||data.ref) === 'string' ? `经文：${data.reference||data.ref}\n` : '';
     showStatus(refLabel + (!latestResults.length ? (scr?'没有找到该经文关联的歌谱，请检查写法（如 约翰福音3:16），或展开下方原始响应排查。':'没有找到结果，可尝试更短的歌名关键词。')
-      : rows.length===0?'没有更多结果了。':'列表已加载，歌谱图片滚动到可见时自动按 id 加载；点击图片可放大。'));
+      : rows.length===0&&!touched.size?'没有更多结果了。':'列表已加载，歌谱图片滚动到可见时自动按 id 加载；点击图片可放大。'));
   }catch(err){
     if(gen!==searchGen) return;
     if(first){ latestResults=[]; $('resultTitle').textContent='搜索未完成'; $('results').innerHTML='<div class="empty">请求失败，请查看顶部提示。</div>'; }
@@ -838,12 +872,13 @@ function renderRows(rows, from=0){
     const i = from + k;
     const name = r.name || r.title || '(未命名歌谱)';
     const no = songNo(r);
-    const extra = [r.bookName, r.artist, r.category].filter(Boolean);
+    const c = cur(r) || r;
+    const extra = [c.bookName, c.artist, c.category].filter(Boolean);
     const head = r._groupLabel ? `<div class="group-h">${escapeHtml(r._groupLabel)}${r._groupCount!=null?`<span class="cnt">${r._groupCount} 条</span>`:''}</div>` : '';
     return head + `<article class="song" data-i="${i}">
       <div class="thumb" data-i="${i}">
         <img alt="${escapeHtml(name)}" decoding="async" referrerpolicy="no-referrer">
-        ${r.images && r.images.length > 1 ? `<span class="pg-badge">${r.images.length} 页</span>` : ''}
+        ${c.images && c.images.length > 1 ? `<span class="pg-badge">${c.images.length} 页</span>` : ''}
         <div class="tmsg">等待加载…</div>
         <span class="zoom-badge">🔍 点击放大</span>
       </div>
@@ -851,6 +886,7 @@ function renderRows(rows, from=0){
         <h3>${escapeHtml(name)}</h3>
         <div class="meta">
           ${no ? `<span class="pill">编号 ${escapeHtml(no)}</span>` : ''}
+          ${r.variants ? `<span class="pill vcnt" ${r.variants.length>1?'':'hidden'}>共 ${r.variants.length} 个谱</span>` : ''}
           ${r.matched ? `<span class="pill">匹配 ${escapeHtml(r.matched)}</span>` : ''}
           ${extra.map(x=>`<span>${escapeHtml(x)}</span>`).join('')}
         </div>
@@ -886,8 +922,10 @@ async function loadThumb(fig, gen, force=false){
   try {
     const url = await getRowImage(row, defPage(row), force);
     if (gen !== searchGen) return;
-    if (row._src==='azm' && row.images && row.images.length>1 && !fig.querySelector('.pg-badge'))
-      fig.insertAdjacentHTML('afterbegin', `<span class="pg-badge">${row.images.length} 页</span>`);
+    if (row._src==='azm') {
+      const c = cur(row); const old = fig.querySelector('.pg-badge'); if (old) old.remove();
+      if (c.images && c.images.length>1) fig.insertAdjacentHTML('afterbegin', `<span class="pg-badge">${c.images.length} 页</span>`);
+    }
     img.onload = ()=>{ fig.classList.remove('loading'); fig.classList.add('ok'); };
     img.onerror = ()=>{ fig.classList.remove('loading'); fig.classList.add('err'); msg.textContent = '图片加载失败，点击重试'; };
     img.src = url;
@@ -946,7 +984,7 @@ async function search(){
 }
 
 /* ============== 大图查看器（缩放 / 拖动 / 双击 / 切换） ============== */
-const lb = { open:false, idx:-1, page:0, swiping:false, scale:1, x:0, y:0, url:'', pts:new Map(), pinchD:0, pinchS:1, moved:false, lastTap:0, drag:null };
+const lb = { tipIdx:-1, tipTimer:0, open:false, idx:-1, page:0, swiping:false, scale:1, x:0, y:0, url:'', pts:new Map(), pinchD:0, pinchS:1, moved:false, lastTap:0, drag:null };
 const lbEl=$('lb'), stage=$('lbStage'), lbImg=$('lbImg'), lbMsg=$('lbMsg');
 
 function applyT(){
@@ -974,17 +1012,35 @@ async function lbShow(i, force=false, page){
   const valid = latestResults.map((r,k)=>hasImg(r)?k:-1).filter(k=>k>=0);
   $('lbCount').textContent = `${valid.indexOf(i)+1} / ${valid.length}`;
   $('lbLyrics').textContent = row._src === 'azm' ? '原页' : '歌词';
-  if (row._src==='azm' && !row.images) {   // 赞美网：先按 id 取图片地址
+  const v = cur(row);
+  const nv = row.variants ? row.variants.length : 0;
+  $('lbVar').hidden = nv < 2; $('lbVars').hidden = nv < 2;
+  clearTimeout(lb.tipTimer);
+  if (nv > 1) {
+    const sel = row._v || 0;
+    $('lbVar').textContent = `谱 ${sel+1}/${nv}`;
+    $('lbVars').innerHTML = '<span class="vl">换谱：</span>' + row.variants.map((_,k)=>
+      `<button type="button" data-k="${k}" class="${k===sel?'on':''}">${escapeHtml(variantLabel(row,k))}</button>`).join('');
+    const on = $('lbVars').querySelector('button.on'); if (on) on.scrollIntoView({block:'nearest',inline:'center'});
+    const tip = $('lbTip');
+    if (lb.tipIdx !== i) {
+      lb.tipIdx = i;
+      tip.textContent = `这首歌有 ${nv} 个不同的谱：点顶部「谱 ${sel+1}/${nv}」或下方「换谱」一行的标签切换（电脑可按 ↑ ↓）；左右滑动切换歌曲。`;
+      tip.classList.remove('fade'); tip.hidden = false;
+      lb.tipTimer = setTimeout(()=>{ tip.classList.add('fade'); setTimeout(()=>{ tip.hidden = true; }, 700); }, 5000);
+    }
+  } else { $('lbTip').hidden = true; lb.tipIdx = -1; }
+  if (row._src==='azm' && !v.images) {   // 赞美网：先按 id 取图片地址
     $('lbPage').hidden = true;
     lbImg.style.visibility = 'hidden'; lbImg.removeAttribute('src');
     lbMsg.textContent = '加载中…';
-    try { await ensureAzmImages(row); }
+    try { await ensureAzmImages(v); }
     catch (e) { if (lb.idx === i) lbMsg.textContent = '加载失败：' + (e.message || e) + '\n点击屏幕重试'; return; }
     if (lb.idx !== i) return;
   }
-  const n = row.images?.length || 0;
+  const n = v.images?.length || 0;
   $('lbPage').hidden = n < 2;
-  if (n > 1) $('lbPage').textContent = row.imageLabels ? `${row.imageLabels[page]}（${page+1}/${n}）` : `第 ${page+1}/${n} 页`;
+  if (n > 1) $('lbPage').textContent = v.imageLabels ? `${v.imageLabels[page]}（${page+1}/${n}）` : `第 ${page+1}/${n} 页`;
   lbImg.style.visibility = 'hidden';
   lbImg.removeAttribute('src');
   if (!hasImg(row)) { lbMsg.textContent = '这条结果没有可显示的图片。'; return; }
@@ -1011,7 +1067,7 @@ function openLightbox(i){
   lb.open = true; lbEl.hidden = false; document.body.style.overflow = 'hidden';
   lbShow(i);
 }
-function closeLightbox(){ lb.open=false; lbEl.hidden=true; document.body.style.overflow=''; lbImg.removeAttribute('src'); lb.idx=-1; }
+function closeLightbox(){ lb.tipIdx=-1; clearTimeout(lb.tipTimer); $('lbTip').hidden=true; lb.open=false; lbEl.hidden=true; document.body.style.overflow=''; lbImg.removeAttribute('src'); lb.idx=-1; }
 function lbStep(d){
   let k = lb.idx + d;
   while (k >= 0 && k < latestResults.length && !hasImg(latestResults[k])) k += d;
@@ -1074,15 +1130,24 @@ $('lbIn').addEventListener('click', ()=>zoomCenter(1.4));
 $('lbOut').addEventListener('click', ()=>zoomCenter(1/1.4));
 $('lbReset').addEventListener('click', resetView);
 $('lbClose').addEventListener('click', closeLightbox);
+function lbSetVariant(k){
+  const r = latestResults[lb.idx]; if (!r || !r.variants) return;
+  const n = r.variants.length; k = (k % n + n) % n;
+  if (k === (r._v||0)) return;
+  r._v = k; lbShow(lb.idx, false, 0);
+  const fig = document.querySelector(`.thumb[data-i="${lb.idx}"]`); if (fig) loadThumb(fig, searchGen);   // 卡片缩略图同步成当前谱
+}
+$('lbVar').addEventListener('click', ()=>{ const r = latestResults[lb.idx]; if (r) lbSetVariant((r._v||0)+1); });
+$('lbVars').addEventListener('click', e=>{ const b = e.target.closest('button[data-k]'); if (b) lbSetVariant(Number(b.dataset.k)); });
 $('lbOpen').addEventListener('click', ()=>{ if (lb.url) window.open(lb.url,'_blank','noopener'); });
 $('lbLyrics').addEventListener('click', ()=>{
   const r = latestResults[lb.idx];
-  if (r?._src === 'azm') { if (r.detailUrl) window.open(r.detailUrl, '_blank', 'noopener'); return; }
+  if (r?._src === 'azm') { const c = cur(r); if (c.detailUrl) window.open(c.detailUrl, '_blank', 'noopener'); return; }
   if (r?._src === 'lib') { showLocalLyrics(r); return; }
   const id = Number(r?.id); if (id > 0) viewLyrics(id);
 });
 $('lbPage').addEventListener('click', ()=>{
-  const n = latestResults[lb.idx]?.images?.length || 0;
+  const n = cur(latestResults[lb.idx])?.images?.length || 0;
   if (n > 1) lbShow(lb.idx, false, (lb.page + 1) % n);
 });
 document.addEventListener('keydown', e=>{
@@ -1091,6 +1156,8 @@ document.addEventListener('keydown', e=>{
   if (e.key==='Escape') closeLightbox();
   else if (e.key==='ArrowLeft') lbStep(-1);
   else if (e.key==='ArrowRight') lbStep(1);
+  else if (e.key==='ArrowUp') { const r = latestResults[lb.idx]; if (r?.variants) { e.preventDefault(); lbSetVariant((r._v||0)-1); } }
+  else if (e.key==='ArrowDown') { const r = latestResults[lb.idx]; if (r?.variants) { e.preventDefault(); lbSetVariant((r._v||0)+1); } }
   else if (e.key==='+'||e.key==='=') zoomCenter(1.4);
   else if (e.key==='-') zoomCenter(1/1.4);
   else if (e.key==='0') resetView();
@@ -1243,7 +1310,7 @@ $('results').addEventListener('click', e=>{
     if (btn.dataset.act === 'view') { hasImg(r) ? openLightbox(i) : showStatus('这条结果没有可显示的图片。'); }
     else if (btn.dataset.act === 'lyrics' && r?._src === 'lib') { showLocalLyrics(r); }
     else if (btn.dataset.act === 'lyrics') { Number(r?.id) > 0 ? viewLyrics(r.id) : showStatus('这条结果没有有效的图片 ID。'); }
-    else if (btn.dataset.act === 'detail') { if (r?.detailUrl) window.open(r.detailUrl, '_blank', 'noopener'); }
+    else if (btn.dataset.act === 'detail') { const c = cur(r); if (c?.detailUrl) window.open(c.detailUrl, '_blank', 'noopener'); }
     return;
   }
   const fig = e.target.closest('.thumb');
