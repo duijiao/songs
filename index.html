@@ -155,8 +155,8 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#0b1220;color:#dbeafe
     </div>
     <div class="seg" id="srcSeg">
       <button type="button" data-src="all"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 4h7v7H4V4Zm9 0h7v7h-7V4ZM4 13h7v7H4v-7Zm9 0h7v7h-7v-7Z"/></svg>全部</button>
-      <button type="button" data-src="hymn"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 6.5C10.4 5.4 8.3 5 5.5 5H3v13h2.7c2.6 0 4.7.4 6.3 1.5 1.6-1.1 3.7-1.5 6.3-1.5H21V5h-2.5c-2.8 0-4.9.4-6.5 1.5Z"/></svg>诗歌本接口</button>
-      <button type="button" data-src="azm"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 3v11.3A3.5 3.5 0 1 0 11 17.5V8l8-1.6v6.9A3.5 3.5 0 1 0 21 16.5V3.5L9 3Z" transform="translate(-1 1)"/></svg>赞美网接口</button>
+      <button type="button" data-src="hymn"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 6.5C10.4 5.4 8.3 5 5.5 5H3v13h2.7c2.6 0 4.7.4 6.3 1.5 1.6-1.1 3.7-1.5 6.3-1.5H21V5h-2.5c-2.8 0-4.9.4-6.5 1.5Z"/></svg>诗歌本</button>
+      <button type="button" data-src="azm"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 3v11.3A3.5 3.5 0 1 0 11 17.5V8l8-1.6v6.9A3.5 3.5 0 1 0 21 16.5V3.5L9 3Z" transform="translate(-1 1)"/></svg>赞美网</button>
       <button type="button" data-src="lib"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M11 2h2v3h3v2h-3v2.2l6 3.3V21h-5v-5a1 1 0 0 0-1-1h-2a1 1 0 0 0-1 1v5H5v-8.5l6-3.3V7H8V5h3V2Z"/></svg>诗歌库</button>
     </div>
     <div class="status" id="status">正在初始化…</div>
@@ -529,6 +529,8 @@ function getImageUrl(id, force=false){
 
 /* ============== 统一图片入口（两种接口） ============== */
 function hasImg(r){ return !!r && (r.images ? r.images.length>0 : Number(r.id)>0); }
+// 诗歌库的歌曲有多张图（多个调）时，默认显示第二张
+function defPage(r){ return r && r._src==='lib' && r.images && r.images.length>1 ? 1 : 0; }
 function getRowImage(r, page=0, force=false){
   if (r.images) return Promise.resolve(r.images[page] || r.images[0]);
   return getImageUrl(Number(r.id), force);
@@ -780,7 +782,7 @@ async function loadThumb(fig, gen, force=false){
   if (!hasImg(row)) { fig.classList.add('err'); msg.textContent = '无图片'; return; }
   fig.classList.add('loading'); msg.textContent = '加载中…';
   try {
-    const url = await getRowImage(row, 0, force);
+    const url = await getRowImage(row, defPage(row), force);
     if (gen !== searchGen) return;
     img.onload = ()=>{ fig.classList.remove('loading'); fig.classList.add('ok'); };
     img.onerror = ()=>{ fig.classList.remove('loading'); fig.classList.add('err'); msg.textContent = '图片加载失败，点击重试'; };
@@ -859,8 +861,9 @@ function zoomAt(factor, cx, cy){
 }
 function zoomCenter(f){ const r=stage.getBoundingClientRect(); zoomAt(f, r.left+r.width/2, r.top+r.height/2); }
 
-async function lbShow(i, force=false, page=0){
+async function lbShow(i, force=false, page){
   const row = latestResults[i]; if (!row) return;
+  if (page == null) page = defPage(row);
   lb.idx = i; lb.page = page; resetView();
   const name = row.name || row.title || '(未命名歌谱)', no = songNo(row);
   $('lbTitle').innerHTML = escapeHtml(name) + (no ? `<small>编号 ${escapeHtml(no)}</small>` : '');
@@ -889,7 +892,7 @@ async function lbShow(i, force=false, page=0){
 function prefetchNeighbors(i){
   [i-1,i+1].forEach(k=>{
     const r = latestResults[k];
-    if (hasImg(r)) getRowImage(r, 0).then(u=>{ const im = new Image(); im.referrerPolicy = 'no-referrer'; im.src = u; }).catch(()=>{});
+    if (hasImg(r)) getRowImage(r, defPage(r)).then(u=>{ const im = new Image(); im.referrerPolicy = 'no-referrer'; im.src = u; }).catch(()=>{});
   });
 }
 function openLightbox(i){
