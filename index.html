@@ -34,7 +34,7 @@ input:focus,select:focus{border-color:var(--blue);box-shadow:0 0 0 3px #2563eb22
 .brand p{margin:4px 0 0;font-size:15px;color:#eef4ff;text-shadow:0 1px 8px #0f172a77}
 .gear{background:#ffffff38;color:#fff;width:42px;height:42px;padding:0;border-radius:50%;font-size:18px;flex:none;backdrop-filter:blur(6px)}
 .gear:hover{background:#ffffff55}
-.searchbar{display:flex;align-items:center;gap:10px;margin-top:18px;background:var(--card);border-radius:999px;padding:7px 7px 7px 20px;box-shadow:0 10px 30px #1e3a8a33}
+.searchbar{position:relative;display:flex;align-items:center;gap:10px;margin-top:18px;background:var(--card);border-radius:999px;padding:7px 7px 7px 20px;box-shadow:0 10px 30px #1e3a8a33}
 .searchbar .ico{width:24px;height:24px;color:#7b8aa3;flex:none}
 .searchbar input{flex:1;border:0!important;box-shadow:none!important;background:transparent!important;padding:12px 4px;font-size:17px;border-radius:0}
 .searchbar button{padding:0 30px;height:48px;border-radius:999px;font-size:17px;background:linear-gradient(135deg,#3b82f6,var(--blue-d));box-shadow:0 6px 16px #2563eb55;white-space:nowrap}
@@ -133,6 +133,33 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#0b1220;color:#dbeafe
   .progress::before{width:100%}
 }
 
+/* favorites + search history */
+.fav-btn{position:absolute;right:8px;top:8px;z-index:3;width:36px;height:36px;padding:0;border-radius:50%;background:#0f172a8c;color:#fff;line-height:1;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(6px);box-shadow:0 2px 8px #0004;transition:background .15s,transform .15s}
+.fav-btn:hover{background:#0f172ab8;transform:scale(1.08)}
+.fav-btn.on{background:#f59e0b;color:#fff}
+.fav-btn.on:hover{background:#d97706}
+.fav-btn svg,#lbFav svg{fill:none;stroke:currentColor;stroke-width:2;stroke-linejoin:round;stroke-linecap:round;flex:none}
+.fav-btn svg{width:20px;height:20px}
+.fav-btn.on svg,#lbFav.on svg{fill:currentColor}
+.fav-btn.pop svg,#lbFav.pop svg{animation:favpop .35s ease-out}
+@keyframes favpop{0%{transform:scale(.6)}55%{transform:scale(1.3) rotate(-8deg)}100%{transform:scale(1)}}
+#lbFav{display:inline-flex;align-items:center;gap:5px}
+#lbFav svg{width:15px;height:15px}
+@media (prefers-reduced-motion:reduce){.fav-btn.pop svg,#lbFav.pop svg{animation:none}}
+.seg button .fcnt{background:#2563eb22;color:inherit;border-radius:999px;padding:0 8px;font-size:12px;line-height:1.7}
+.seg button.on .fcnt{background:#ffffff38}
+.seg button .fcnt:empty{display:none}
+#lbFav.on{background:#f59e0b!important;color:#fff}
+.hist{position:absolute;left:0;right:0;top:calc(100% + 8px);z-index:60;background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:18px;box-shadow:0 14px 36px #1e3a8a40;padding:6px;max-height:360px;overflow:auto;text-align:left}
+.hist-h{display:flex;justify-content:space-between;align-items:center;padding:6px 12px 4px;font-size:12.5px;color:var(--muted);font-weight:650}
+.hist-clear{cursor:pointer;color:var(--blue)}
+.hist-i{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:12px;cursor:pointer;font-size:15px}
+.hist-i:hover{background:var(--soft)}
+.hist-i svg{width:16px;height:16px;color:var(--muted);flex:none}
+.hist-t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hist-x{color:var(--muted);padding:2px 8px;border-radius:8px;font-size:13px;flex:none}
+.hist-x:hover{background:var(--line);color:var(--ink)}
+
 /* lightbox */
 .pg-badge{position:absolute;left:8px;top:8px;background:#000a;color:#fff;border-radius:999px;font-size:12px;padding:2px 9px;z-index:1}
 .lb{position:fixed;inset:0;z-index:100;background:#05080ff2;display:flex;flex-direction:column;color:#fff;user-select:none;-webkit-user-select:none}
@@ -193,12 +220,14 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#0b1220;color:#dbeafe
       <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
       <input id="keyword" placeholder="搜索歌名、歌手、歌词或歌谱号" autocomplete="off" enterkeyhint="search">
       <button id="searchBtn" type="button">搜索</button>
+      <div class="hist" id="hist" hidden></div>
     </div>
     <div class="seg" id="srcSeg">
       <button type="button" data-src="all"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 4h7v7H4V4Zm9 0h7v7h-7V4ZM4 13h7v7H4v-7Zm9 0h7v7h-7v-7Z"/></svg>全部</button>
       <button type="button" data-src="hymn"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 6.5C10.4 5.4 8.3 5 5.5 5H3v13h2.7c2.6 0 4.7.4 6.3 1.5 1.6-1.1 3.7-1.5 6.3-1.5H21V5h-2.5c-2.8 0-4.9.4-6.5 1.5Z"/></svg>诗歌本接口</button>
       <button type="button" data-src="azm"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 3v11.3A3.5 3.5 0 1 0 11 17.5V8l8-1.6v6.9A3.5 3.5 0 1 0 21 16.5V3.5L9 3Z" transform="translate(-1 1)"/></svg>赞美网接口</button>
       <button type="button" data-src="lib"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M11 2h2v3h3v2h-3v2.2l6 3.3V21h-5v-5a1 1 0 0 0-1-1h-2a1 1 0 0 0-1 1v5H5v-8.5l6-3.3V7H8V5h3V2Z"/></svg>诗歌库</button>
+      <button type="button" data-src="fav"><svg viewBox="0 0 24 24" fill="currentColor"><path d="m12 2.5 2.9 6.2 6.8.8-5 4.7 1.3 6.7L12 17.6l-6 3.3 1.3-6.7-5-4.7 6.8-.8L12 2.5Z"/></svg>我的收藏<span class="fcnt" id="favCnt"></span></button>
     </div>
     <div class="seg sub" id="azmModeBar" hidden>
       <button type="button" data-mode="song">按歌名 / 歌词</button>
@@ -305,6 +334,7 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#0b1220;color:#dbeafe
     <div class="lb-title" id="lbTitle"></div>
     <button id="lbVar" type="button" hidden>谱 1/2</button>
     <button id="lbPage" type="button" hidden>1/2 页</button>
+    <button id="lbFav" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2.8 2.8 5.9 6.4.8-4.7 4.4 1.2 6.4-5.7-3.1-5.7 3.1 1.2-6.4-4.7-4.4 6.4-.8L12 2.8Z"/></svg><span>收藏</span></button>
     <button id="lbLyrics" type="button">歌词</button>
     <button id="lbOpen" type="button" class="hide-m">新窗口原图</button>
     <button id="lbClose" type="button">✕ 关闭</button>
@@ -367,7 +397,7 @@ function applySource(){
   $('registerBtn').closest('.row').hidden = !(source==='hymn'||source==='all');
   $('azmModeBar').hidden = source!=='azm';
   $('azmModeBar').querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.mode===azmMode));
-  $('keyword').placeholder = source==='azm'&&azmMode==='scripture' ? '输入经文，如 约翰福音3:16' : '搜索歌名、歌手、歌词或歌谱号';
+  $('keyword').placeholder = source==='fav' ? '在收藏中筛选（留空显示全部）' : source==='azm'&&azmMode==='scripture' ? '输入经文，如 约翰福音3:16' : '搜索歌名、歌手、歌词或歌谱号';
   document.querySelector('details.tools').hidden = !(source==='hymn'||source==='all');
   
 }
@@ -376,7 +406,7 @@ function loadSettings(){
     const s=JSON.parse(localStorage.getItem(SET_KEY)||'{}');
     PERSIST.forEach(k=>{ if(s[k]!=null && s[k]!=='') $(k).value=s[k]; });
     if(s.size) $('sizeSel').value=s.size;
-    if(['all','azm','hymn','lib'].includes(s.source)) source=s.source;
+    if(['all','azm','hymn','lib','fav'].includes(s.source)) source=s.source;
     if(['song','scripture'].includes(s.azmMode)) azmMode=s.azmMode;
   }catch{}
   try{ $('authToken').value=sessionStorage.getItem('HymnToken')||''; }catch{}
@@ -951,6 +981,7 @@ function renderRows(rows, from=0){
         ${c.images && c.images.length > 1 ? `<span class="pg-badge">${c.images.length} 页</span>` : ''}
         <div class="tmsg">${r._noScore?'该歌曲暂无歌谱<br>可点「原页」查看':'等待加载…'}</div>
         <span class="zoom-badge">🔍 点击放大</span>
+        ${favBtnHtml(r,i)}
       </div>
       <div class="info">
         <h3>${escapeHtml(name)}</h3>
@@ -1010,7 +1041,9 @@ async function loadThumb(fig, gen, force=false){
 
 async function search(){
   const keyword = $('keyword').value.trim();
+  if (source === 'fav') { hideHist(); return showFavs(keyword); }
   if (!keyword) { showStatus('请先输入歌名或关键词。'); $('keyword').focus(); return; }
+  addHistory(keyword); hideHist();
   if (source === 'azm') { saveSettings(); return searchAzm(keyword, 1, 1); }
   if (source === 'lib') { saveSettings(); return searchLib(keyword); }
   if (source === 'all') { saveSettings(); return searchAll(keyword); }
@@ -1083,6 +1116,7 @@ async function lbShow(i, force=false, page){
   const valid = latestResults.map((r,k)=>hasImg(r)?k:-1).filter(k=>k>=0);
   $('lbCount').textContent = `${valid.indexOf(i)+1} / ${valid.length}`;
   $('lbLyrics').textContent = row._src === 'azm' ? '原页' : '歌词';
+  updateLbFav();
   const v = cur(row);
   const nv = row.variants ? row.variants.length : 0;
   $('lbVar').hidden = nv < 2; $('lbVars').hidden = nv < 2;
@@ -1325,6 +1359,116 @@ async function copyLyrics(){
   } catch (e) { $('lyricsMeta').textContent = '复制失败，可手动选中歌词复制。'; }
 }
 
+/* ============== 收藏 ============== */
+const FAV_KEY='HymnFavs.v1';
+let favs=[];   // 新收藏在前；每项是歌曲卡片的快照，离线也能列出，点开再取图
+function loadFavs(){ try{ const a=JSON.parse(localStorage.getItem(FAV_KEY)||'[]'); favs=Array.isArray(a)?a:[]; }catch{ favs=[]; } }
+function persistFavs(){
+  try{ localStorage.setItem(FAV_KEY,JSON.stringify(favs,(k,v)=>k==='_imgP'?undefined:v)); return true; }
+  catch{ showStatus('收藏保存失败：浏览器存储空间不足或被禁用。'); return false; }
+}
+function favKeyOf(r){
+  if(!r) return '';
+  const base=r.variants?r.variants[0]:r;
+  let id=base&&base.id;
+  if(!id&&base&&base._sid) id='s'+base._sid;
+  return id?(r._src||'hymn')+':'+id:'';
+}
+function isFav(r){ const k=favKeyOf(r); return !!k&&favs.some(f=>f._favKey===k); }
+function snapshotRow(r){
+  const o=JSON.parse(JSON.stringify(r,(k,v)=>(k==='_imgP'||k==='_groupLabel'||k==='_groupCount')?undefined:v));
+  if(!o._src) o._src='hymn';
+  [o].concat(o.variants||[]).forEach(c=>{ if(c._src==='azm'&&!c._noScore&&Array.isArray(c.images)&&!c.images.length) delete c.images; });
+  o._favKey=favKeyOf(r); o._favAt=Date.now();
+  return o;
+}
+function toggleFav(r){   // 返回 true=已收藏 / false=已取消 / null=失败
+  const k=favKeyOf(r);
+  if(!k){ showStatus('这条结果无法收藏（没有有效的歌谱 ID）。'); return null; }
+  const i=favs.findIndex(f=>f._favKey===k);
+  if(i>=0) favs.splice(i,1); else favs.unshift(snapshotRow(r));
+  if(!persistFavs()){ loadFavs(); return null; }
+  updateFavCount();
+  return i<0;
+}
+function updateFavCount(){ const el=$('favCnt'); if(el) el.textContent=favs.length?String(favs.length):''; }
+const STAR_SVG='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2.8 2.8 5.9 6.4.8-4.7 4.4 1.2 6.4-5.7-3.1-5.7 3.1 1.2-6.4-4.7-4.4 6.4-.8L12 2.8Z"/></svg>';
+function favBtnHtml(r,i){
+  const on=isFav(r);
+  return `<button type="button" class="fav-btn${on?' on':''}" data-act="fav" data-i="${i}" aria-label="${on?'取消收藏':'收藏'}" aria-pressed="${on}" title="${on?'取消收藏':'收藏'}">${STAR_SVG}</button>`;
+}
+function popFav(el,on){ el.classList.remove('pop'); if(on){ void el.offsetWidth; el.classList.add('pop'); } }
+function paintFavBtn(btn,on){
+  btn.classList.toggle('on',on); btn.title=on?'取消收藏':'收藏';
+  btn.setAttribute('aria-label',btn.title); btn.setAttribute('aria-pressed',String(on)); popFav(btn,on);
+}
+function updateLbFav(pop){
+  const b=$('lbFav'), r=latestResults[lb.idx], on=!!r&&isFav(r);
+  b.innerHTML=STAR_SVG+'<span>'+(on?'已收藏':'收藏')+'</span>'; b.classList.toggle('on',on);
+  if(pop) popFav(b,on);
+}
+function toggleFavAt(i){
+  const r=latestResults[i]; if(!r) return;
+  const on=toggleFav(r); if(on===null) return;
+  const btn=document.querySelector(`.fav-btn[data-i="${i}"]`); if(btn) paintFavBtn(btn,on);
+  if(lb.open&&lb.idx===i) updateLbFav(true);
+  showStatus(on?'已加入收藏。':(source==='fav'?'已取消收藏（下次刷新收藏列表时移除，点 ☆ 可恢复）。':'已取消收藏。'));
+}
+function showFavs(keyword){
+  searchGen++; queue.length=0;
+  const kw=(keyword||'').trim().toLowerCase();
+  const hit=f=>{
+    if(!kw) return true;
+    const c=cur(f)||f;
+    return [f.name,c.name,c.bookName,c.artist,c.category,c.tabName,c.key,songNo(f)].some(x=>String(x||'').toLowerCase().includes(kw))
+      || String(c.lyrics||'').toLowerCase().includes(kw);
+  };
+  latestResults=favs.filter(hit);
+  $('moreWrap').hidden=true; $('rawBox').hidden=true; setProgress(false); $('searchBtn').disabled=false;
+  $('resultTitle').textContent=kw?`收藏搜索结果（${latestResults.length} / ${favs.length} 首）`:`我的收藏（${favs.length} 首）`;
+  $('exportBtn').disabled=!latestResults.length;
+  if(!latestResults.length){
+    $('results').innerHTML='<div class="empty">'+(favs.length?'收藏里没有匹配的歌，换个关键词试试。':'还没有收藏。在搜索结果卡片的图片右上角点 ☆，或在大图查看器里点「收藏」。')+'</div>';
+    showStatus(favs.length?'没有匹配的收藏。':'还没有收藏。');
+    return;
+  }
+  renderRows(latestResults);
+  showStatus('收藏保存在本机浏览器里；点击图片可放大，导出 JSON 可备份。');
+}
+$('lbFav').addEventListener('click',()=>{ if(lb.idx>=0) toggleFavAt(lb.idx); });
+
+/* ============== 搜索历史 ============== */
+const HIST_KEY='HymnHistory.v1', HIST_MAX=20, HIST_SHOW=10;
+let hist=[];
+function loadHist(){ try{ const a=JSON.parse(localStorage.getItem(HIST_KEY)||'[]'); hist=Array.isArray(a)?a.filter(x=>typeof x==='string'&&x):[]; }catch{ hist=[]; } }
+function saveHist(){ try{ localStorage.setItem(HIST_KEY,JSON.stringify(hist)); }catch{} }
+function addHistory(q){ q=(q||'').trim(); if(!q) return; hist=[q].concat(hist.filter(x=>x!==q)).slice(0,HIST_MAX); saveHist(); }
+function hideHist(){ $('hist').hidden=true; }
+function renderHist(){
+  const box=$('hist');
+  if(source==='fav'){ box.hidden=true; return; }
+  const kw=$('keyword').value.trim().toLowerCase();
+  const list=hist.filter(x=>!kw||(x.toLowerCase().includes(kw)&&x.toLowerCase()!==kw)).slice(0,HIST_SHOW);
+  if(!list.length){ box.hidden=true; return; }
+  const clock='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>';
+  box.innerHTML='<div class="hist-h"><span>最近搜索</span><span class="hist-clear" data-hact="clear">清空</span></div>'
+    + list.map(x=>`<div class="hist-i" data-hact="pick" data-q="${escapeHtml(x)}">${clock}<span class="hist-t">${escapeHtml(x)}</span><span class="hist-x" data-hact="del" data-q="${escapeHtml(x)}" title="删除这条">✕</span></div>`).join('');
+  box.hidden=false;
+}
+$('keyword').addEventListener('focus',renderHist);
+$('keyword').addEventListener('input',renderHist);
+$('keyword').addEventListener('blur',()=>setTimeout(hideHist,200));
+$('keyword').addEventListener('keydown',e=>{ if(e.key==='Escape') hideHist(); });
+$('hist').addEventListener('mousedown',e=>e.preventDefault());   // 点击历史项时不让输入框失焦
+$('hist').addEventListener('click',e=>{
+  const t=e.target.closest('[data-hact]'); if(!t) return;
+  const a=t.dataset.hact;
+  if(a==='clear'){ hist=[]; saveHist(); hideHist(); }
+  else if(a==='del'){ hist=hist.filter(x=>x!==t.dataset.q); saveHist(); renderHist(); }
+  else if(a==='pick'){ $('keyword').value=t.dataset.q; hideHist(); search(); }
+});
+loadFavs(); loadHist(); updateFavCount();
+
 /* ============== 事件绑定 ============== */
 $('searchBtn').addEventListener('click', search);
 $('keyword').addEventListener('keydown', e=>{ if (e.key === 'Enter') search(); });
@@ -1353,7 +1497,7 @@ document.querySelectorAll('#srcSeg button').forEach(b=>b.addEventListener('click
   $('results').innerHTML = '<div class="empty">已切换到' + ({all:'全部来源',azm:'赞美网',lib:'诗歌库',hymn:'诗歌本'}[source]) + '接口，输入歌名开始搜索。</div>';
   $('resultTitle').textContent = '搜索结果'; $('exportBtn').disabled = true; $('moreWrap').hidden = true; $('rawBox').hidden = true;
   showStatus('已切换接口。');
-  if ($('keyword').value.trim()) search();
+  if (source === 'fav' || $('keyword').value.trim()) search();
 }));
 $('moreBtn').addEventListener('click', ()=>searchAzm(azmState.q, azmState.next.page, azmState.next.scorePage));
 $('azmModeBar').addEventListener('click', e=>{
@@ -1378,7 +1522,8 @@ $('results').addEventListener('click', e=>{
   const btn = e.target.closest('button[data-act]');
   if (btn) {
     const i = Number(btn.dataset.i), r = latestResults[i];
-    if (btn.dataset.act === 'view') { hasImg(r) ? openLightbox(i) : showStatus('这条结果没有可显示的图片。'); }
+    if (btn.dataset.act === 'fav') { toggleFavAt(i); }
+    else if (btn.dataset.act === 'view') { hasImg(r) ? openLightbox(i) : showStatus('这条结果没有可显示的图片。'); }
     else if (btn.dataset.act === 'lyrics' && r?._src === 'lib') { showLocalLyrics(r); }
     else if (btn.dataset.act === 'lyrics') { Number(r?.id) > 0 ? viewLyrics(r.id) : showStatus('这条结果没有有效的图片 ID。'); }
     else if (btn.dataset.act === 'detail') { const c = cur(r); if (c?.detailUrl) window.open(c.detailUrl, '_blank', 'noopener'); }
@@ -1408,6 +1553,7 @@ $('registerBtn').addEventListener('click', async ()=>{
 /* ============== 启动 ============== */
 (async ()=>{
   loadSettings();
+  if (source === 'fav') { showFavs($('keyword').value.trim()); return; }
   if (source !== 'hymn') { showStatus(({all:'三个来源',lib:'诗歌库',azm:'赞美网'}[source])+'已就绪，输入关键词开始搜索。'); return; }
   if (!hasCrypto()) { showStatus('CryptoJS 未加载成功，请检查网络或刷新页面。'); updateDevInfo(); return; }
   try { const saved = localStorage.getItem(KEY_SIGN_ID) || ''; if (saved) { deviceSignId = saved; updateDevInfo(); } } catch {}
