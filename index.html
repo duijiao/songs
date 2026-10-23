@@ -38,11 +38,17 @@ input:focus,select:focus{border-color:var(--blue);box-shadow:0 0 0 3px #2563eb22
 .searchbar .ico{width:24px;height:24px;color:#7b8aa3;flex:none}
 .searchbar input{flex:1;border:0!important;box-shadow:none!important;background:transparent!important;padding:12px 4px;font-size:17px;border-radius:0}
 .searchbar button{padding:0 30px;height:48px;border-radius:999px;font-size:17px;background:linear-gradient(135deg,#3b82f6,var(--blue-d));box-shadow:0 6px 16px #2563eb55;white-space:nowrap}
-.seg{display:inline-flex;gap:4px;margin-top:16px;padding:5px;border-radius:999px;background:color-mix(in srgb,var(--card) 82%,transparent);backdrop-filter:blur(10px);box-shadow:0 6px 20px #1e3a8a22;max-width:100%}
+.seg{display:inline-flex;overflow-x:auto;scrollbar-width:none;gap:4px;margin-top:16px;padding:5px;border-radius:999px;background:color-mix(in srgb,var(--card) 82%,transparent);backdrop-filter:blur(10px);box-shadow:0 6px 20px #1e3a8a22;max-width:100%}
 .seg button{display:flex;align-items:center;gap:8px;background:transparent;color:var(--muted);padding:10px 22px;font-size:16px;border-radius:999px;white-space:nowrap}
 .seg button svg{width:22px;height:22px;flex:none}
 .seg button:hover{background:#2563eb14}
 .seg button.on{background:linear-gradient(135deg,#3b82f6,var(--blue-d));color:#fff;box-shadow:0 6px 14px #2563eb44}
+.group-h{grid-column:1/-1;display:flex;align-items:center;gap:10px;font-weight:700;font-size:15px;margin:12px 2px 0}
+.group-h::after{content:"";flex:1;height:1px;background:var(--line)}
+.group-h .cnt{color:var(--muted);font-weight:400;font-size:13px}
+.results>.group-h:first-child{margin-top:0}
+.swipe-hint{display:none}
+@media(pointer:coarse){.swipe-hint{display:inline}}
 .status{font-size:12.5px;white-space:pre-wrap}
 .top .status{color:var(--muted);margin-top:10px;min-height:18px}
 
@@ -124,7 +130,8 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#0b1220;color:#dbeafe
   .brand h1{font-size:23px}.brand p{font-size:13px}
   .searchbar{padding-left:14px;margin-top:14px}.searchbar input{font-size:16px}
   .searchbar button{padding:0 20px;height:44px;font-size:16px}
-  .seg button{padding:9px 14px;font-size:14px}
+  .seg button{padding:9px 12px;font-size:14px;gap:6px}
+  .seg button svg{width:18px;height:18px}
 }
 </style>
 </head>
@@ -147,8 +154,10 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#0b1220;color:#dbeafe
       <button id="searchBtn" type="button">搜索</button>
     </div>
     <div class="seg" id="srcSeg">
+      <button type="button" data-src="all"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 4h7v7H4V4Zm9 0h7v7h-7V4ZM4 13h7v7H4v-7Zm9 0h7v7h-7v-7Z"/></svg>全部</button>
       <button type="button" data-src="hymn"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 6.5C10.4 5.4 8.3 5 5.5 5H3v13h2.7c2.6 0 4.7.4 6.3 1.5 1.6-1.1 3.7-1.5 6.3-1.5H21V5h-2.5c-2.8 0-4.9.4-6.5 1.5Z"/></svg>诗歌本接口</button>
       <button type="button" data-src="azm"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 3v11.3A3.5 3.5 0 1 0 11 17.5V8l8-1.6v6.9A3.5 3.5 0 1 0 21 16.5V3.5L9 3Z" transform="translate(-1 1)"/></svg>赞美网接口</button>
+      <button type="button" data-src="lib"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M11 2h2v3h3v2h-3v2.2l6 3.3V21h-5v-5a1 1 0 0 0-1-1h-2a1 1 0 0 0-1 1v5H5v-8.5l6-3.3V7H8V5h3V2Z"/></svg>诗歌库</button>
     </div>
     <div class="status" id="status">正在初始化…</div>
   </div>
@@ -165,6 +174,15 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#0b1220;color:#dbeafe
           <button id="bgReset" type="button" class="ghost">恢复渐变</button>
           <input id="bgFile" type="file" accept="image/*" hidden>
         </div>
+      </div>
+      <div class="field">
+        <label for="libUrl">诗歌库（排班表）Supabase 地址</label>
+        <input id="libUrl" value="https://citorcvisrfqkflwortx.supabase.co" spellcheck="false">
+        <span class="hint">读取表 church_app_state（id=1）的 song_library 字段，与排班表是同一份数据。</span>
+      </div>
+      <div class="field">
+        <label for="libKey">诗歌库 anon key</label>
+        <input id="libKey" type="password" value="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNpdG9yY3Zpc3JmcWtmbHdvcnR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4OTk4NjQsImV4cCI6MjA5NzQ3NTg2NH0.I1G-oO1T3wfWJ5GcmYejT6Y0x2wAJ0xXRQsIcPVPjos" spellcheck="false" autocomplete="off">
       </div>
       <div class="field">
         <label for="azmBase">赞美网搜索接口地址</label>
@@ -256,6 +274,7 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#0b1220;color:#dbeafe
     <button id="lbIn" type="button">＋</button>
     <button id="lbReset" type="button">适应屏幕</button>
     <span class="hide-m" id="lbCount"></span>
+    <span class="swipe-hint">‹ 左右滑动切歌 ›</span>
   </div>
 </div>
 
@@ -289,15 +308,16 @@ const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
 
 /* ============== 设置持久化 ============== */
 const SET_KEY='HymnSettings.v1';
-const PERSIST=['apiBase','imageApiBase','bookId','loginName','azmBase'];
-let source='hymn';
+const PERSIST=['apiBase','imageApiBase','bookId','loginName','azmBase','libUrl','libKey'];
+let source='all';
 const azmState={q:'',page:0,done:true,loading:false};
 function applySource(){
   document.querySelectorAll('#srcSeg button').forEach(b=>b.classList.toggle('on',b.dataset.src===source));
-  ['apiBase','imageApiBase','bookId','loginName','authToken'].forEach(k=>{ $(k).closest('.field').hidden = source!=='hymn'; });
-  $('azmBase').closest('.field').hidden = source!=='azm';
-  $('registerBtn').closest('.row').hidden = source!=='hymn';
-  document.querySelector('details.tools').hidden = source!=='hymn';
+  ['apiBase','imageApiBase','bookId','loginName','authToken'].forEach(k=>{ $(k).closest('.field').hidden = !(source==='hymn'||source==='all'); });
+  $('azmBase').closest('.field').hidden = !(source==='azm'||source==='all');
+  ['libUrl','libKey'].forEach(k=>{ $(k).closest('.field').hidden = !(source==='lib'||source==='all'); });
+  $('registerBtn').closest('.row').hidden = !(source==='hymn'||source==='all');
+  document.querySelector('details.tools').hidden = !(source==='hymn'||source==='all');
   
 }
 function loadSettings(){
@@ -305,7 +325,7 @@ function loadSettings(){
     const s=JSON.parse(localStorage.getItem(SET_KEY)||'{}');
     PERSIST.forEach(k=>{ if(s[k]!=null && s[k]!=='') $(k).value=s[k]; });
     if(s.size) $('sizeSel').value=s.size;
-    if(s.source==='azm'||s.source==='hymn') source=s.source;
+    if(['all','azm','hymn','lib'].includes(s.source)) source=s.source;
   }catch{}
   try{ $('authToken').value=sessionStorage.getItem('HymnToken')||''; }catch{}
   applySize();
@@ -508,9 +528,9 @@ function getImageUrl(id, force=false){
 }
 
 /* ============== 统一图片入口（两种接口） ============== */
-function hasImg(r){ return !!r && (r._src==='azm' ? (r.images?.length>0) : Number(r.id)>0); }
+function hasImg(r){ return !!r && (r.images ? r.images.length>0 : Number(r.id)>0); }
 function getRowImage(r, page=0, force=false){
-  if (r._src==='azm') return Promise.resolve(r.images[page] || r.images[0]);
+  if (r.images) return Promise.resolve(r.images[page] || r.images[0]);
   return getImageUrl(Number(r.id), force);
 }
 
@@ -544,6 +564,7 @@ async function searchAzm(keyword, page=1){
     if(gen!==searchGen) return;
     if(!res.ok||data.success===false) throw new Error(`HTTP ${res.status}：${data.msg||data.message||data.error||text.slice(0,150)}`);
     const rows=(Array.isArray(data.items)?data.items:[]).map(normalizeAzm);
+    if(source==='all'&&page>1&&rows[0]){ rows[0]._groupLabel='赞美网 · 第 '+page+' 页'; rows[0]._groupCount=rows.length; }
     const from=latestResults.length;
     latestResults=latestResults.concat(rows);
     azmState.q=keyword; azmState.page=page;
@@ -561,6 +582,138 @@ async function searchAzm(keyword, page=1){
   }finally{
     azmState.loading=false; $('searchBtn').disabled=false; $('moreBtn').disabled=false;
   }
+}
+
+/* ============== 诗歌库（排班表 Supabase） ============== */
+const libState={ cache:null, at:0, key:'', loading:false };
+function normalizeLib(it){
+  const keys=(Array.isArray(it.keys)?it.keys:[]).filter(k=>k&&k.src);
+  return { _src:'lib', id:String(it.id||''), name:(it.title||'').trim(), bookName:(it.songbook||'').trim(),
+    artist:(it.band||'').trim(), category:(it.category||'').trim(), lyrics:it.lyrics||'', createdAt:it.createdAt||'',
+    images:keys.map(k=>k.src), imageLabels:keys.map(k=>(k.label||'').trim()||'默认') };
+}
+async function fetchLibrary(force=false){
+  const url=$('libUrl').value.trim().replace(/\/+$/,''), key=$('libKey').value.trim();
+  if(!url||!key) throw new Error('请在设置里填写诗歌库的 Supabase 地址和 anon key');
+  const ck=url+'|'+key;
+  if(!force && libState.cache && libState.key===ck && Date.now()-libState.at<5*60*1000) return libState.cache;
+  let res;
+  try{
+    res=await fetch(url+'/rest/v1/church_app_state?id=eq.1&select=song_library',
+      { headers:{ apikey:key, Authorization:'Bearer '+key } });
+  }catch{ throw new Error('无法连接诗歌库（网络不可达）'); }
+  const text=await res.text();
+  let data; try{ data=JSON.parse(text); }catch{ data=null; }
+  if(!res.ok) throw new Error(`诗歌库 HTTP ${res.status}：${(data&&(data.message||data.msg))||text.slice(0,150)}`);
+  const lib=Array.isArray(data)&&data[0]&&Array.isArray(data[0].song_library)?data[0].song_library:[];
+  const rows=lib.map(normalizeLib).filter(r=>r.name);
+  rows.sort((a,b)=>new Date(b.createdAt||0)-new Date(a.createdAt||0));
+  libState.cache=rows; libState.at=Date.now(); libState.key=ck;
+  return rows;
+}
+async function searchLib(keyword){
+  const gen=++searchGen; queue.length=0; latestResults=[];
+  $('resultTitle').textContent='正在搜索…';
+  $('results').innerHTML='<div class="empty">正在读取诗歌库…</div>';
+  $('exportBtn').disabled=true; $('moreWrap').hidden=true; $('searchBtn').disabled=true;
+  showStatus('搜索中…');
+  try{
+    const all=await fetchLibrary();
+    if(gen!==searchGen) return;
+    const kw=keyword.toLowerCase();
+    const hit=r=>r.name.toLowerCase().includes(kw)||r.bookName.toLowerCase().includes(kw)||r.artist.toLowerCase().includes(kw)||r.category.toLowerCase().includes(kw);
+    const byMeta=all.filter(hit);
+    const byLyrics=all.filter(r=>!hit(r)&&r.lyrics.toLowerCase().includes(kw));
+    latestResults=byMeta.concat(byLyrics);
+    $('resultTitle').textContent=`搜索结果（${latestResults.length} 条，诗歌库共 ${all.length} 首）`;
+    renderRows(latestResults);
+    $('exportBtn').disabled=!latestResults.length;
+    showStatus(latestResults.length?`搜索完成${byLyrics.length?`（含 ${byLyrics.length} 首歌词命中）`:''}，图片自动加载中；点击图片可放大。`:'没有找到结果，可尝试更短的关键词。');
+  }catch(err){
+    if(gen!==searchGen) return;
+    latestResults=[]; $('resultTitle').textContent='搜索未完成';
+    $('results').innerHTML='<div class="empty">请求失败，请查看顶部提示。</div>';
+    showStatus('错误：'+(err?.message||String(err))+'\n常见原因：地址或 key 不对、表权限（RLS）未开放读取。');
+  }finally{ if(gen===searchGen) $('searchBtn').disabled=false; }
+}
+function showLocalLyrics(r){
+  currentLyricsText=r.lyrics||'';
+  $('lyricsPanel').hidden=false;
+  $('lyricsTitle').textContent='歌词 · '+(r.name||'');
+  $('lyricsText').textContent=currentLyricsText;
+  $('lyricsMeta').textContent=currentLyricsText?`共 ${currentLyricsText.length} 字`:'这首诗歌还没有录入歌词。';
+}
+
+/* ============== 全部：聚合搜索 ============== */
+function filterLib(all, keyword){
+  const kw=keyword.toLowerCase();
+  const hit=r=>r.name.toLowerCase().includes(kw)||r.bookName.toLowerCase().includes(kw)||r.artist.toLowerCase().includes(kw)||r.category.toLowerCase().includes(kw);
+  return all.filter(hit).concat(all.filter(r=>!hit(r)&&r.lyrics.toLowerCase().includes(kw)));
+}
+async function fetchHymnRows(keyword){
+  const base=$('apiBase').value.trim().replace(/\/+$/,'');
+  if(!base) throw new Error('未填写诗歌本 API 地址');
+  const bookId=Number.parseInt($('bookId').value||'0',10);
+  const url=new URL(base+'/image/searchByName');
+  url.searchParams.set('key',keyword);
+  url.searchParams.set('bookId',String(Number.isFinite(bookId)?bookId:0));
+  url.searchParams.set('musicType','0');
+  url.searchParams.set('take','100');
+  if(!deviceSignId) await registerDevice();
+  let res;
+  try{ res=await fetch(url.toString(),{headers:makeHeaders()}); }
+  catch{ throw new Error('无法连接（跨域限制或网络不可达）'); }
+  const text=await res.text();
+  let data; try{ data=JSON.parse(text); }catch{ data={raw:text}; }
+  if(!res.ok) throw new Error(`HTTP ${res.status}：${data.msg||data.message||text.slice(0,100)}`);
+  if(data&&data.msg) throw new Error(data.msg);
+  return normalizeRows(data).map(r=>Object.assign({_src:'hymn'},r));
+}
+async function fetchAzmRows(keyword,page=1){
+  const base=$('azmBase').value.trim();
+  if(!base) throw new Error('未填写赞美网接口地址');
+  const url=new URL(base); url.searchParams.set('q',keyword); url.searchParams.set('page',String(page));
+  let res;
+  try{ res=await fetch(url.toString()); }
+  catch{ throw new Error('无法连接（跨域限制或网络不可达）'); }
+  const text=await res.text();
+  let data; try{ data=JSON.parse(text); }catch{ data={raw:text}; }
+  if(!res.ok||data.success===false) throw new Error(`HTTP ${res.status}：${data.msg||data.message||data.error||text.slice(0,100)}`);
+  return (Array.isArray(data.items)?data.items:[]).map(normalizeAzm);
+}
+async function searchAll(keyword){
+  const gen=++searchGen; queue.length=0; latestResults=[]; azmState.done=true; azmState.q=keyword; azmState.page=1;
+  $('resultTitle').textContent='正在搜索…';
+  $('results').innerHTML='<div class="empty">正在同时搜索诗歌库、诗歌本、赞美网…</div>';
+  $('exportBtn').disabled=true; $('moreWrap').hidden=true; $('searchBtn').disabled=true;
+  showStatus('正在同时搜索三个来源…');
+  const addGroup=(label,rows)=>{
+    if(gen!==searchGen||!rows.length) return;
+    rows[0]._groupLabel=label; rows[0]._groupCount=rows.length;
+    const from=latestResults.length;
+    latestResults=latestResults.concat(rows);
+    renderRows(latestResults,from);
+    $('resultTitle').textContent=`搜索结果（${latestResults.length} 条）`;
+    $('exportBtn').disabled=false;
+  };
+  const tasks=[
+    ['诗歌库',()=>fetchLibrary().then(all=>filterLib(all,keyword))],
+    ['诗歌本',()=>fetchHymnRows(keyword)],
+    ['赞美网',()=>fetchAzmRows(keyword,1).then(rows=>{ azmState.done=rows.length===0; return rows; })],
+  ];
+  const summary=[], errors=[];
+  await Promise.all(tasks.map(async([label,fn])=>{
+    try{ const rows=await fn(); if(gen!==searchGen) return; summary.push(`${label} ${rows.length}`); addGroup(label,rows); }
+    catch(e){ if(gen!==searchGen) return; summary.push(`${label} ✕`); errors.push(`${label}：${e?.message||e}`); }
+  }));
+  if(gen!==searchGen) return;
+  $('searchBtn').disabled=false;
+  if(!latestResults.length){
+    $('resultTitle').textContent='没有找到结果';
+    $('results').innerHTML='<div class="empty">三个来源都没有结果，可尝试更短的关键词。</div>';
+  }
+  $('moreWrap').hidden=azmState.done;
+  showStatus(summary.join(' · ')+(errors.length?'\n'+errors.join('\n'):'')+(latestResults.length?'\n点击图片可放大，放大后可左右滑动切歌。':''));
 }
 
 /* ============== 搜索 ============== */
@@ -582,7 +735,8 @@ function renderRows(rows, from=0){
     const name = r.name || r.title || '(未命名歌谱)';
     const no = songNo(r);
     const extra = [r.bookName, r.artist, r.category].filter(Boolean);
-    return `<article class="song" data-i="${i}">
+    const head = r._groupLabel ? `<div class="group-h">${escapeHtml(r._groupLabel)}${r._groupCount!=null?`<span class="cnt">${r._groupCount} 条</span>`:''}</div>` : '';
+    return head + `<article class="song" data-i="${i}">
       <div class="thumb" data-i="${i}">
         <img alt="${escapeHtml(name)}" decoding="async" referrerpolicy="no-referrer">
         ${r.images && r.images.length > 1 ? `<span class="pg-badge">${r.images.length} 页</span>` : ''}
@@ -643,6 +797,8 @@ async function search(){
   const keyword = $('keyword').value.trim();
   if (!keyword) { showStatus('请先输入歌名或关键词。'); $('keyword').focus(); return; }
   if (source === 'azm') { saveSettings(); return searchAzm(keyword, 1); }
+  if (source === 'lib') { saveSettings(); return searchLib(keyword); }
+  if (source === 'all') { saveSettings(); return searchAll(keyword); }
   const base = $('apiBase').value.trim().replace(/\/+$/, '');
   if (!base) { showStatus('请填写 API 基础地址。'); return; }
   saveSettings();
@@ -684,7 +840,7 @@ async function search(){
 }
 
 /* ============== 大图查看器（缩放 / 拖动 / 双击 / 切换） ============== */
-const lb = { open:false, idx:-1, page:0, scale:1, x:0, y:0, url:'', pts:new Map(), pinchD:0, pinchS:1, moved:false, lastTap:0, drag:null };
+const lb = { open:false, idx:-1, page:0, swiping:false, scale:1, x:0, y:0, url:'', pts:new Map(), pinchD:0, pinchS:1, moved:false, lastTap:0, drag:null };
 const lbEl=$('lb'), stage=$('lbStage'), lbImg=$('lbImg'), lbMsg=$('lbMsg');
 
 function applyT(){
@@ -713,7 +869,7 @@ async function lbShow(i, force=false, page=0){
   $('lbLyrics').textContent = row._src === 'azm' ? '原页' : '歌词';
   const n = row.images?.length || 0;
   $('lbPage').hidden = n < 2;
-  if (n > 1) $('lbPage').textContent = `第 ${page+1}/${n} 页`;
+  if (n > 1) $('lbPage').textContent = row.imageLabels ? `${row.imageLabels[page]}（${page+1}/${n}）` : `第 ${page+1}/${n} 页`;
   lbImg.style.visibility = 'hidden';
   lbImg.removeAttribute('src');
   if (!hasImg(row)) { lbMsg.textContent = '这条结果没有可显示的图片。'; return; }
@@ -744,7 +900,8 @@ function closeLightbox(){ lb.open=false; lbEl.hidden=true; document.body.style.o
 function lbStep(d){
   let k = lb.idx + d;
   while (k >= 0 && k < latestResults.length && !hasImg(latestResults[k])) k += d;
-  if (k >= 0 && k < latestResults.length) lbShow(k);
+  if (k >= 0 && k < latestResults.length) { lbShow(k); return true; }
+  return false;
 }
 
 stage.addEventListener('wheel', e=>{ e.preventDefault(); zoomAt(e.deltaY<0?1.2:1/1.2, e.clientX, e.clientY); }, {passive:false});
@@ -756,6 +913,7 @@ stage.addEventListener('pointerdown', e=>{
   if (lb.pts.size === 2) {
     const [a,b] = [...lb.pts.values()];
     lb.pinchD = Math.hypot(a.x-b.x,a.y-b.y); lb.pinchS = lb.scale; lb.drag = null;
+    if (lb.swiping) { lb.swiping = false; if (lb.scale === 1) { lb.x = 0; applyT(); } }
   } else lb.drag = { sx:e.clientX, sy:e.clientY, ox:lb.x, oy:lb.y };
 });
 stage.addEventListener('pointermove', e=>{
@@ -770,12 +928,21 @@ stage.addEventListener('pointermove', e=>{
     const dx = e.clientX-lb.drag.sx, dy = e.clientY-lb.drag.sy;
     if (Math.abs(dx)+Math.abs(dy) > 4) lb.moved = true;
     if (lb.scale > 1) { lb.x = lb.drag.ox+dx; lb.y = lb.drag.oy+dy; applyT(); stage.classList.add('grabbing'); }
+    else if (lb.swiping || Math.abs(dx) > Math.abs(dy)) { lb.swiping = true; lb.x = dx*0.9; applyT(); }
   }
 });
 function ptrEnd(e){
   if (!lb.pts.has(e.pointerId)) return;
   const wasSingle = lb.pts.size === 1;
   lb.pts.delete(e.pointerId); lb.drag = null; lb.pinchD = 0; stage.classList.remove('grabbing');
+  if (wasSingle && lb.swiping) {
+    lb.swiping = false;
+    const dx = lb.x, need = Math.min(80, stage.clientWidth * 0.2);
+    if (e.type === 'pointerup' && Math.abs(dx) > need && lbStep(dx < 0 ? 1 : -1)) return;
+    lbImg.style.transition = 'transform .18s ease'; lb.x = 0; applyT();
+    setTimeout(()=>{ lbImg.style.transition = ''; }, 200);
+    return;
+  }
   if (lb.pts.size === 1) { const [p]=[...lb.pts.values()]; lb.drag={sx:p.x,sy:p.y,ox:lb.x,oy:lb.y}; }
   if (wasSingle && !lb.moved && e.type==='pointerup') {
     const now = Date.now();
@@ -796,6 +963,7 @@ $('lbOpen').addEventListener('click', ()=>{ if (lb.url) window.open(lb.url,'_bla
 $('lbLyrics').addEventListener('click', ()=>{
   const r = latestResults[lb.idx];
   if (r?._src === 'azm') { if (r.detailUrl) window.open(r.detailUrl, '_blank', 'noopener'); return; }
+  if (r?._src === 'lib') { showLocalLyrics(r); return; }
   const id = Number(r?.id); if (id > 0) viewLyrics(id);
 });
 $('lbPage').addEventListener('click', ()=>{
@@ -868,7 +1036,7 @@ async function viewLyrics(id){
   if (!$('apiBase').value.trim()) { showStatus('请填写 API 基础地址。'); return; }
   if (!hasCrypto()) { showStatus('CryptoJS 未加载，无法签名请求。'); return; }
   if (!deviceSignId) await registerDevice();
-  const row = latestResults.find(r=>Number(r.id)===id);
+  const row = latestResults.find(r=>r._src!=='azm'&&r._src!=='lib'&&Number(r.id)===id);
   currentLyricsText = '';
   $('lyricsPanel').hidden = false;
   $('lyricsTitle').textContent = '歌词 · ' + (row?.name || 'ID ' + id);
@@ -924,12 +1092,12 @@ $('bgFile').addEventListener('change', e=>{
 });
 $('settingsBtn').addEventListener('click', ()=>{ const p=$('settingsPanel'); p.hidden=!p.hidden; });
 $('sizeSel').addEventListener('change', ()=>{ applySize(); saveSettings(); });
-['apiBase','imageApiBase','bookId','loginName','authToken','azmBase'].forEach(k=>$(k).addEventListener('change', saveSettings));
+['apiBase','imageApiBase','bookId','loginName','authToken','azmBase','libUrl','libKey'].forEach(k=>$(k).addEventListener('change', saveSettings));
 document.querySelectorAll('#srcSeg button').forEach(b=>b.addEventListener('click', ()=>{
   if (b.dataset.src === source) return;
   source = b.dataset.src; applySource(); saveSettings();
   searchGen++; latestResults = []; queue.length = 0;
-  $('results').innerHTML = '<div class="empty">已切换到' + (source==='azm' ? '赞美网' : '诗歌本') + '接口，输入歌名开始搜索。</div>';
+  $('results').innerHTML = '<div class="empty">已切换到' + ({all:'全部来源',azm:'赞美网',lib:'诗歌库',hymn:'诗歌本'}[source]) + '接口，输入歌名开始搜索。</div>';
   $('resultTitle').textContent = '搜索结果'; $('exportBtn').disabled = true; $('moreWrap').hidden = true;
   showStatus('已切换接口。');
   if ($('keyword').value.trim()) search();
@@ -949,6 +1117,7 @@ $('results').addEventListener('click', e=>{
   if (btn) {
     const i = Number(btn.dataset.i), r = latestResults[i];
     if (btn.dataset.act === 'view') { hasImg(r) ? openLightbox(i) : showStatus('这条结果没有可显示的图片。'); }
+    else if (btn.dataset.act === 'lyrics' && r?._src === 'lib') { showLocalLyrics(r); }
     else if (btn.dataset.act === 'lyrics') { Number(r?.id) > 0 ? viewLyrics(r.id) : showStatus('这条结果没有有效的图片 ID。'); }
     else if (btn.dataset.act === 'detail') { if (r?.detailUrl) window.open(r.detailUrl, '_blank', 'noopener'); }
     return;
@@ -977,7 +1146,7 @@ $('registerBtn').addEventListener('click', async ()=>{
 /* ============== 启动 ============== */
 (async ()=>{
   loadSettings();
-  if (source === 'azm') { showStatus('赞美网接口已就绪，输入歌名开始搜索。'); return; }
+  if (source !== 'hymn') { showStatus(({all:'三个来源',lib:'诗歌库',azm:'赞美网'}[source])+'已就绪，输入关键词开始搜索。'); return; }
   if (!hasCrypto()) { showStatus('CryptoJS 未加载成功，请检查网络或刷新页面。'); updateDevInfo(); return; }
   try { const saved = localStorage.getItem(KEY_SIGN_ID) || ''; if (saved) { deviceSignId = saved; updateDevInfo(); } } catch {}
   showStatus('正在注册设备签名…');
