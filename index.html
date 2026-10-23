@@ -43,6 +43,8 @@ input:focus,select:focus{border-color:var(--blue);box-shadow:0 0 0 3px #2563eb22
 .seg button svg{width:22px;height:22px;flex:none}
 .seg button:hover{background:#2563eb14}
 .seg button.on{background:linear-gradient(135deg,#3b82f6,var(--blue-d));color:#fff;box-shadow:0 6px 14px #2563eb44}
+.seg.sub{margin-top:10px;padding:4px}
+.seg.sub button{padding:7px 18px;font-size:14px}
 .group-h{grid-column:1/-1;display:flex;align-items:center;gap:10px;font-weight:700;font-size:15px;margin:12px 2px 0}
 .group-h::after{content:"";flex:1;height:1px;background:var(--line)}
 .group-h .cnt{color:var(--muted);font-weight:400;font-size:13px}
@@ -155,9 +157,13 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#0b1220;color:#dbeafe
     </div>
     <div class="seg" id="srcSeg">
       <button type="button" data-src="all"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 4h7v7H4V4Zm9 0h7v7h-7V4ZM4 13h7v7H4v-7Zm9 0h7v7h-7v-7Z"/></svg>全部</button>
-      <button type="button" data-src="hymn"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 6.5C10.4 5.4 8.3 5 5.5 5H3v13h2.7c2.6 0 4.7.4 6.3 1.5 1.6-1.1 3.7-1.5 6.3-1.5H21V5h-2.5c-2.8 0-4.9.4-6.5 1.5Z"/></svg>诗歌本</button>
-      <button type="button" data-src="azm"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 3v11.3A3.5 3.5 0 1 0 11 17.5V8l8-1.6v6.9A3.5 3.5 0 1 0 21 16.5V3.5L9 3Z" transform="translate(-1 1)"/></svg>赞美网</button>
+      <button type="button" data-src="hymn"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 6.5C10.4 5.4 8.3 5 5.5 5H3v13h2.7c2.6 0 4.7.4 6.3 1.5 1.6-1.1 3.7-1.5 6.3-1.5H21V5h-2.5c-2.8 0-4.9.4-6.5 1.5Z"/></svg>诗歌本接口</button>
+      <button type="button" data-src="azm"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 3v11.3A3.5 3.5 0 1 0 11 17.5V8l8-1.6v6.9A3.5 3.5 0 1 0 21 16.5V3.5L9 3Z" transform="translate(-1 1)"/></svg>赞美网接口</button>
       <button type="button" data-src="lib"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M11 2h2v3h3v2h-3v2.2l6 3.3V21h-5v-5a1 1 0 0 0-1-1h-2a1 1 0 0 0-1 1v5H5v-8.5l6-3.3V7H8V5h3V2Z"/></svg>诗歌库</button>
+    </div>
+    <div class="seg sub" id="azmModeBar" hidden>
+      <button type="button" data-mode="song">按歌名 / 歌词</button>
+      <button type="button" data-mode="scripture">按圣经经文检索</button>
     </div>
     <div class="status" id="status">正在初始化…</div>
   </div>
@@ -187,7 +193,7 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#0b1220;color:#dbeafe
       <div class="field">
         <label for="azmBase">赞美网搜索接口地址</label>
         <input id="azmBase" value="https://azmapi.djshgzs233.workers.dev/" spellcheck="false">
-        <span class="hint">请求格式：地址?q=歌名&amp;page=页码；图片为上游直链，无歌词。</span>
+        <span class="hint">列表只取文字信息（page_size=10，不含图片）；歌谱图片按歌谱 id（?id=）逐条加载，与诗歌本方式一致。经文检索走 /scripture，仅此接口可用。</span>
       </div>
       <div class="field">
         <label for="apiBase">搜索 / 歌词 / 注册 API 地址</label>
@@ -249,7 +255,8 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#0b1220;color:#dbeafe
       <button id="exportBtn" class="ghost" type="button" disabled>导出 JSON</button>
     </div>
   </div>
-  <div id="results" class="results"><div class="empty">输入歌名后开始搜索，歌谱图片会自动加载。</div></div>
+  <div id="results" class="results"><div class="empty">输入歌名后开始搜索，歌谱图片会随滚动自动加载。</div></div>
+  <details class="rawd" id="rawBox" hidden><summary>查看原始响应（未能识别结果时用于排查）</summary><pre id="rawPre"></pre></details>
   <div id="moreWrap" style="text-align:center;margin-top:16px" hidden><button id="moreBtn" class="ghost" type="button">加载更多</button></div>
 </main>
 
@@ -310,13 +317,15 @@ const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
 const SET_KEY='HymnSettings.v1';
 const PERSIST=['apiBase','imageApiBase','bookId','loginName','azmBase','libUrl','libKey'];
 let source='all';
-const azmState={q:'',page:0,done:true,loading:false};
 function applySource(){
   document.querySelectorAll('#srcSeg button').forEach(b=>b.classList.toggle('on',b.dataset.src===source));
   ['apiBase','imageApiBase','bookId','loginName','authToken'].forEach(k=>{ $(k).closest('.field').hidden = !(source==='hymn'||source==='all'); });
   $('azmBase').closest('.field').hidden = !(source==='azm'||source==='all');
   ['libUrl','libKey'].forEach(k=>{ $(k).closest('.field').hidden = !(source==='lib'||source==='all'); });
   $('registerBtn').closest('.row').hidden = !(source==='hymn'||source==='all');
+  $('azmModeBar').hidden = source!=='azm';
+  $('azmModeBar').querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.mode===azmMode));
+  $('keyword').placeholder = source==='azm'&&azmMode==='scripture' ? '输入经文，如 约翰福音3:16' : '搜索歌名、歌手、歌词或歌谱号';
   document.querySelector('details.tools').hidden = !(source==='hymn'||source==='all');
   
 }
@@ -326,6 +335,7 @@ function loadSettings(){
     PERSIST.forEach(k=>{ if(s[k]!=null && s[k]!=='') $(k).value=s[k]; });
     if(s.size) $('sizeSel').value=s.size;
     if(['all','azm','hymn','lib'].includes(s.source)) source=s.source;
+    if(['song','scripture'].includes(s.azmMode)) azmMode=s.azmMode;
   }catch{}
   try{ $('authToken').value=sessionStorage.getItem('HymnToken')||''; }catch{}
   applySize();
@@ -334,7 +344,7 @@ function loadSettings(){
 }
 function saveSettings(){
   try{
-    const s={}; PERSIST.forEach(k=>s[k]=$(k).value.trim()); s.size=$('sizeSel').value; s.source=source;
+    const s={}; PERSIST.forEach(k=>s[k]=$(k).value.trim()); s.size=$('sizeSel').value; s.source=source; s.azmMode=azmMode;
     localStorage.setItem(SET_KEY,JSON.stringify(s));
     sessionStorage.setItem('HymnToken',$('authToken').value.trim());
   }catch{}
@@ -532,54 +542,153 @@ function hasImg(r){ return !!r && (r.images ? r.images.length>0 : Number(r.id)>0
 // 诗歌库的歌曲有多张图（多个调）时，默认显示第二张
 function defPage(r){ return r && r._src==='lib' && r.images && r.images.length>1 ? 1 : 0; }
 function getRowImage(r, page=0, force=false){
+  if (r._src==='azm' && !r.images) {
+    if (force) r._imgP = null;
+    return ensureAzmImages(r).then(imgs=>{
+      if (!imgs.length) { const e = new Error('该歌谱暂无图片'); e.noImg = true; throw e; }
+      return imgs[page] || imgs[0];
+    });
+  }
   if (r.images) return Promise.resolve(r.images[page] || r.images[0]);
   return getImageUrl(Number(r.id), force);
 }
 
 /* ============== 赞美网接口 ============== */
-function normalizeAzm(it){
-  const imgs=(it.images||[]).map(m=>m.direct_url||m.url).filter(Boolean);
-  return { _src:'azm', id:Number(it.mTabId||it.id)||0, name:it.mTitle||it.mTabName||'',
-    bookName:(it.mSongbook||'').replace(/[《》]/g,''), artist:it.mArtistName||'', category:it.mTags||'',
-    images:imgs, detailUrl:it.detail_url||'' };
+const AZM_PS=10;
+let azmMode='song'; // song | scripture（仅赞美网接口下可用）
+const azmState={q:'',page:0,next:{page:2,scorePage:1},done:true,loading:false,seen:new Set()};
+
+function extractImgUrls(o){
+  if(!o||typeof o!=='object') return [];
+  let arr=o.images||o.imgs||o.pictures||o.image_list;
+  if(!Array.isArray(arr)) arr=[o.image||o.image_url||o.img_url||o.direct_url].filter(Boolean);
+  return arr.map(m=>typeof m==='string'?m:(m&&(m.direct_url||m.url||m.src))).filter(Boolean);
 }
-async function searchAzm(keyword, page=1){
-  const base=$('azmBase').value.trim();
-  if(!base){ showStatus('请填写赞美网接口地址。'); return; }
+function normalizeAzm(it){
+  const imgs=extractImgUrls(it);
+  return { _src:'azm', id:Number(it.mTabId||it.tab_id||it.score_id||it.sheet_id||it.id)||0,
+    name:it.mTitle||it.mTabName||it.title||it.name||'',
+    bookName:(it.mSongbook||it.songbook||'').replace(/[《》]/g,''), artist:it.mArtistName||it.artist||'', category:it.mTags||it.tags||'',
+    images:imgs.length?imgs:undefined,   // undefined = 尚未加载图片，需要时按 id 取
+    detailUrl:it.detail_url||'' };
+}
+function azmUrl(path,params){
+  const u=new URL($('azmBase').value.trim());
+  if(path) u.pathname=u.pathname.replace(/\/+$/,'')+path;
+  Object.entries(params).forEach(([k,v])=>u.searchParams.set(k,String(v)));
+  return u.toString();
+}
+async function azmGet(url){
+  let res;
+  try{ res=await fetch(url); }
+  catch{ throw new Error('无法读取接口响应（网络不可达或接口未开启 CORS）'); }
+  const text=await res.text();
+  let data; try{ data=JSON.parse(text); }catch{ data={raw:text}; }
+  if(!res.ok||data.success===false) throw new Error(`HTTP ${res.status}：${data.msg||data.message||data.error||text.slice(0,150)}`);
+  return data;
+}
+const AZM_LIST_KEYS=['items','scores','sheets','list','results','records'];
+function pickArr(o,keys){ for(const k of keys){ if(o&&Array.isArray(o[k])) return o[k]; } return null; }
+// 经文接口可能是「歌曲 → 歌谱」两层结构，这里统一拍平成歌谱列表
+function flattenAzm(list,parent){
+  const out=[];
+  for(const it of list||[]){
+    if(!it||typeof it!=='object') continue;
+    const sub=pickArr(it,['scores','sheets','items']);
+    if(sub&&!it.mTabId){ out.push(...flattenAzm(sub,it)); continue; }
+    const r=normalizeAzm(it);
+    if(!r.name&&parent) r.name=parent.mTitle||parent.title||parent.name||'';
+    if(!r.id) continue;
+    out.push(r);
+  }
+  return out;
+}
+function extractAzmRows(data){
+  for(const o of [data,data&&data.data,data&&data.result]){
+    if(!o||typeof o!=='object') continue;
+    const list=Array.isArray(o)?o:pickArr(o,[...AZM_LIST_KEYS,'songs']);
+    if(list&&list.length) return flattenAzm(list);
+  }
+  return [];
+}
+const numOf=(...v)=>{ for(const x of v){ if(x==null||x==='') continue; const n=Number(x); if(Number.isFinite(n)) return n; } return null; };
+
+/* 歌谱图片：列表里不带图，按歌谱 id 单独取（走并发队列，滚动到可见才触发） */
+function ensureAzmImages(r){
+  if(r.images) return Promise.resolve(r.images);
+  if(r._imgP) return r._imgP;
+  r._imgP=enqueue(async()=>{
+    const data=await azmGet(azmUrl('',{id:r.id}));
+    const cands=[data.item,data.detail,data.data,data.result,Array.isArray(data.items)?data.items[0]:null,data]
+      .filter(o=>o&&typeof o==='object'&&!Array.isArray(o));
+    let imgs=[], meta=null;
+    for(const c of cands){ imgs=extractImgUrls(c); if(imgs.length){ meta=c; break; } }
+    if(meta&&!r.detailUrl) r.detailUrl=meta.detail_url||'';
+    r.images=imgs;
+    return imgs;
+  }).catch(e=>{ r._imgP=null; throw e; });
+  return r._imgP;
+}
+
+async function searchAzm(keyword, page=1, scorePage=1){
+  if(!$('azmBase').value.trim()){ showStatus('请填写赞美网接口地址。'); return; }
   if(azmState.loading) return;
+  const scr = source==='azm' && azmMode==='scripture';
+  const first = page===1 && scorePage===1;
   let gen = searchGen;
-  if(page===1){
-    gen = ++searchGen; queue.length=0; latestResults=[];
+  if(first){
+    gen = ++searchGen; queue.length=0; latestResults=[]; azmState.seen=new Set();
     $('resultTitle').textContent='正在搜索…';
-    $('results').innerHTML='<div class="empty">正在请求赞美网歌谱…（该接口会逐条解析详情页，可能较慢）</div>';
-    $('exportBtn').disabled=true; $('moreWrap').hidden=true;
+    $('results').innerHTML=`<div class="empty">${scr?'正在检索经文关联的歌曲与歌谱…':'正在请求赞美网歌谱…'}</div>`;
+    $('exportBtn').disabled=true; $('moreWrap').hidden=true; $('rawBox').hidden=true;
   }
   azmState.loading=true; $('searchBtn').disabled=true; $('moreBtn').disabled=true;
-  showStatus(page===1?'搜索中，请稍候…':`正在加载第 ${page} 页…`);
+  showStatus(first?'搜索中，请稍候…':`正在加载更多…`);
   try{
-    const url=new URL(base); url.searchParams.set('q',keyword); url.searchParams.set('page',String(page));
-    let res;
-    try{ res=await fetch(url.toString()); }
-    catch{ throw new Error('无法读取接口响应（网络不可达或接口未开启 CORS）'); }
-    const text=await res.text();
-    let data; try{ data=JSON.parse(text); }catch{ data={raw:text}; }
+    const url = scr
+      ? azmUrl('/scripture',{reference:keyword,page,page_size:AZM_PS,include_scores:1,score_page:scorePage,include_images:0})
+      : azmUrl('',{q:keyword,page,page_size:AZM_PS,include_images:0});
+    const data=await azmGet(url);
     if(gen!==searchGen) return;
-    if(!res.ok||data.success===false) throw new Error(`HTTP ${res.status}：${data.msg||data.message||data.error||text.slice(0,150)}`);
-    const rows=(Array.isArray(data.items)?data.items:[]).map(normalizeAzm);
+    let rows=extractAzmRows(data);
+    const rawCount=rows.length;
+    if(scr){ rows=rows.filter(r=>!azmState.seen.has(r.id)); rows.forEach(r=>azmState.seen.add(r.id)); }
+
+    // 分页判断
+    const pg=data.pagination||(data.data&&data.data.pagination)||{};
+    const songTotal=numOf(data.total_pages,pg.total_pages,pg.totalPages,data.data&&data.data.total_pages);
+    const hm=data.has_more??pg.has_more;
+    const songMore = songTotal!=null ? page<songTotal : (hm!=null ? !!hm : rawCount>=AZM_PS);
+    let next=null, done;
+    if(scr){
+      const sp=data.score_pagination||data.scores_pagination||(data.data&&data.data.score_pagination)||{};
+      const scoreTotal=numOf(data.score_total_pages,data.scores_total_pages,sp.total_pages,sp.totalPages);
+      const shm=data.score_has_more??sp.has_more;
+      const scoreMore = scoreTotal!=null ? scorePage<scoreTotal : (shm!=null ? !!shm : rawCount>=AZM_PS);
+      if(scoreMore) next={page,scorePage:scorePage+1};
+      else if(songMore) next={page:page+1,scorePage:1};
+      done=!next;
+    }else{
+      next={page:page+1,scorePage:1};
+      done = rawCount===0 || !songMore;
+    }
     if(source==='all'&&page>1&&rows[0]){ rows[0]._groupLabel='赞美网 · 第 '+page+' 页'; rows[0]._groupCount=rows.length; }
     const from=latestResults.length;
     latestResults=latestResults.concat(rows);
-    azmState.q=keyword; azmState.page=page;
-    azmState.done = rows.length===0 || (data.total_pages!=null && page>=Number(data.total_pages));
-    $('resultTitle').textContent=`搜索结果（${latestResults.length} 条）`;
+    azmState.q=keyword; azmState.page=page; azmState.next=next||{page:page+1,scorePage:1}; azmState.done=done;
+    $('resultTitle').textContent=`${scr?'经文歌谱':'搜索结果'}（${latestResults.length} 条）`;
     renderRows(latestResults, from);
     $('exportBtn').disabled=!latestResults.length;
-    $('moreWrap').hidden=azmState.done||!latestResults.length;
-    showStatus(!latestResults.length?'没有找到结果，可尝试更短的歌名关键词。'
-      : rows.length===0?'没有更多结果了。':'搜索完成，图片自动加载中；点击图片可放大。');
+    $('moreWrap').hidden=done||!latestResults.length;
+    if(scr&&!latestResults.length){
+      $('rawPre').textContent=JSON.stringify(data,null,2).slice(0,6000); $('rawBox').hidden=false;
+    }
+    const refLabel = scr && typeof (data.reference||data.ref) === 'string' ? `经文：${data.reference||data.ref}\n` : '';
+    showStatus(refLabel + (!latestResults.length ? (scr?'没有找到该经文关联的歌谱，请检查写法（如 约翰福音3:16），或展开下方原始响应排查。':'没有找到结果，可尝试更短的歌名关键词。')
+      : rows.length===0?'没有更多结果了。':'列表已加载，歌谱图片滚动到可见时自动按 id 加载；点击图片可放大。'));
   }catch(err){
     if(gen!==searchGen) return;
-    if(page===1){ latestResults=[]; $('resultTitle').textContent='搜索未完成'; $('results').innerHTML='<div class="empty">请求失败，请查看顶部提示。</div>'; }
+    if(first){ latestResults=[]; $('resultTitle').textContent='搜索未完成'; $('results').innerHTML='<div class="empty">请求失败，请查看顶部提示。</div>'; }
     showStatus('错误：'+(err?.message||String(err)));
   }finally{
     azmState.loading=false; $('searchBtn').disabled=false; $('moreBtn').disabled=false;
@@ -672,19 +781,12 @@ async function fetchHymnRows(keyword){
   return normalizeRows(data).map(r=>Object.assign({_src:'hymn'},r));
 }
 async function fetchAzmRows(keyword,page=1){
-  const base=$('azmBase').value.trim();
-  if(!base) throw new Error('未填写赞美网接口地址');
-  const url=new URL(base); url.searchParams.set('q',keyword); url.searchParams.set('page',String(page));
-  let res;
-  try{ res=await fetch(url.toString()); }
-  catch{ throw new Error('无法连接（跨域限制或网络不可达）'); }
-  const text=await res.text();
-  let data; try{ data=JSON.parse(text); }catch{ data={raw:text}; }
-  if(!res.ok||data.success===false) throw new Error(`HTTP ${res.status}：${data.msg||data.message||data.error||text.slice(0,100)}`);
-  return (Array.isArray(data.items)?data.items:[]).map(normalizeAzm);
+  if(!$('azmBase').value.trim()) throw new Error('未填写赞美网接口地址');
+  const data=await azmGet(azmUrl('',{q:keyword,page,page_size:AZM_PS,include_images:0}));
+  return extractAzmRows(data);
 }
 async function searchAll(keyword){
-  const gen=++searchGen; queue.length=0; latestResults=[]; azmState.done=true; azmState.q=keyword; azmState.page=1;
+  const gen=++searchGen; queue.length=0; latestResults=[]; azmState.done=true; azmState.q=keyword; azmState.page=1; azmState.next={page:2,scorePage:1};
   $('resultTitle').textContent='正在搜索…';
   $('results').innerHTML='<div class="empty">正在同时搜索诗歌库、诗歌本、赞美网…</div>';
   $('exportBtn').disabled=true; $('moreWrap').hidden=true; $('searchBtn').disabled=true;
@@ -784,13 +886,15 @@ async function loadThumb(fig, gen, force=false){
   try {
     const url = await getRowImage(row, defPage(row), force);
     if (gen !== searchGen) return;
+    if (row._src==='azm' && row.images && row.images.length>1 && !fig.querySelector('.pg-badge'))
+      fig.insertAdjacentHTML('afterbegin', `<span class="pg-badge">${row.images.length} 页</span>`);
     img.onload = ()=>{ fig.classList.remove('loading'); fig.classList.add('ok'); };
     img.onerror = ()=>{ fig.classList.remove('loading'); fig.classList.add('err'); msg.textContent = '图片加载失败，点击重试'; };
     img.src = url;
   } catch (e) {
     if (gen !== searchGen) return;
     fig.classList.remove('loading'); fig.classList.add('err');
-    msg.textContent = (e.message || String(e)) + '\n点击重试';
+    msg.textContent = e.noImg ? '该歌谱暂无图片' : (e.message || String(e)) + '\n点击重试';
     msg.style.whiteSpace = 'pre-wrap';
   }
 }
@@ -798,7 +902,7 @@ async function loadThumb(fig, gen, force=false){
 async function search(){
   const keyword = $('keyword').value.trim();
   if (!keyword) { showStatus('请先输入歌名或关键词。'); $('keyword').focus(); return; }
-  if (source === 'azm') { saveSettings(); return searchAzm(keyword, 1); }
+  if (source === 'azm') { saveSettings(); return searchAzm(keyword, 1, 1); }
   if (source === 'lib') { saveSettings(); return searchLib(keyword); }
   if (source === 'all') { saveSettings(); return searchAll(keyword); }
   const base = $('apiBase').value.trim().replace(/\/+$/, '');
@@ -870,6 +974,14 @@ async function lbShow(i, force=false, page){
   const valid = latestResults.map((r,k)=>hasImg(r)?k:-1).filter(k=>k>=0);
   $('lbCount').textContent = `${valid.indexOf(i)+1} / ${valid.length}`;
   $('lbLyrics').textContent = row._src === 'azm' ? '原页' : '歌词';
+  if (row._src==='azm' && !row.images) {   // 赞美网：先按 id 取图片地址
+    $('lbPage').hidden = true;
+    lbImg.style.visibility = 'hidden'; lbImg.removeAttribute('src');
+    lbMsg.textContent = '加载中…';
+    try { await ensureAzmImages(row); }
+    catch (e) { if (lb.idx === i) lbMsg.textContent = '加载失败：' + (e.message || e) + '\n点击屏幕重试'; return; }
+    if (lb.idx !== i) return;
+  }
   const n = row.images?.length || 0;
   $('lbPage').hidden = n < 2;
   if (n > 1) $('lbPage').textContent = row.imageLabels ? `${row.imageLabels[page]}（${page+1}/${n}）` : `第 ${page+1}/${n} 页`;
@@ -1101,11 +1213,20 @@ document.querySelectorAll('#srcSeg button').forEach(b=>b.addEventListener('click
   source = b.dataset.src; applySource(); saveSettings();
   searchGen++; latestResults = []; queue.length = 0;
   $('results').innerHTML = '<div class="empty">已切换到' + ({all:'全部来源',azm:'赞美网',lib:'诗歌库',hymn:'诗歌本'}[source]) + '接口，输入歌名开始搜索。</div>';
-  $('resultTitle').textContent = '搜索结果'; $('exportBtn').disabled = true; $('moreWrap').hidden = true;
+  $('resultTitle').textContent = '搜索结果'; $('exportBtn').disabled = true; $('moreWrap').hidden = true; $('rawBox').hidden = true;
   showStatus('已切换接口。');
   if ($('keyword').value.trim()) search();
 }));
-$('moreBtn').addEventListener('click', ()=>searchAzm(azmState.q, azmState.page + 1));
+$('moreBtn').addEventListener('click', ()=>searchAzm(azmState.q, azmState.next.page, azmState.next.scorePage));
+$('azmModeBar').addEventListener('click', e=>{
+  const b = e.target.closest('button[data-mode]');
+  if (!b || b.dataset.mode === azmMode) return;
+  azmMode = b.dataset.mode; applySource(); saveSettings();
+  searchGen++; latestResults = []; queue.length = 0;
+  $('results').innerHTML = '<div class="empty">' + (azmMode==='scripture' ? '请输入经文（如 约翰福音3:16），检索与该经文相关的歌谱。' : '输入歌名开始搜索。') + '</div>';
+  $('resultTitle').textContent = '搜索结果'; $('exportBtn').disabled = true; $('moreWrap').hidden = true; $('rawBox').hidden = true;
+  if ($('keyword').value.trim()) search();
+});
 $('apiBase').addEventListener('change', async ()=>{ deviceSignId=''; deviceSignSecret=''; await registerDevice(); updateDevInfo(); });
 $('viewImageBtn').addEventListener('click', ()=>viewImageById($('imageIdInput').value));
 $('viewLyricsBtn').addEventListener('click', ()=>viewLyrics($('imageIdInput').value));
@@ -1131,7 +1252,7 @@ $('results').addEventListener('click', e=>{
   if (fig.classList.contains('ok')) openLightbox(Number(fig.dataset.i));
 });
 $('exportBtn').addEventListener('click', ()=>{
-  const blob = new Blob([JSON.stringify(latestResults, null, 2)], {type: 'application/json;charset=utf-8'});
+  const blob = new Blob([JSON.stringify(latestResults, (k,v)=>k==='_imgP'?undefined:v, 2)], {type: 'application/json;charset=utf-8'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob); a.download = 'song-search-results.json'; a.click();
   URL.revokeObjectURL(a.href);
