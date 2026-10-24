@@ -466,7 +466,16 @@ const PERSIST=['apiBase','imageApiBase','bookId','loginName','azmBase','libUrl',
 let source='all';
 /* ---- 诗歌本：检索前选择歌本 ---- */
 const BOOKS_KEY='HymnBooks.v1';
-function loadBooks(){ try{ const o=JSON.parse(localStorage.getItem(BOOKS_KEY)||'{}'); return o&&typeof o==='object'?o:{}; }catch{ return {}; } }
+let FILE_BOOKS={};   // 来自同目录 books.json：{ bookid: bname }
+async function loadBookFile(){
+  try{
+    const r=await fetch('books.json',{cache:'no-cache'}); if(!r.ok) return;
+    const a=await r.json(); const m={};
+    (Array.isArray(a)?a:[]).forEach(x=>{ if(x&&x.bookid!=null&&x.bname) m[x.bookid]=String(x.bname).trim(); });
+    FILE_BOOKS=m; renderBookSel();
+  }catch{}
+}
+function loadBooks(){ let o={}; try{ const t=JSON.parse(localStorage.getItem(BOOKS_KEY)||'{}'); if(t&&typeof t==='object') o=t; }catch{} return Object.assign({},o,FILE_BOOKS); }
 function learnBooks(rows){
   const m=loadBooks(); let ch=false;
   (rows||[]).forEach(r=>{
@@ -475,15 +484,17 @@ function learnBooks(rows){
   });
   if(ch){ try{ localStorage.setItem(BOOKS_KEY,JSON.stringify(m)); }catch{} renderBookSel(); }
 }
-const COMMON_BOOKS=['灵栖清泉','挖硒谱','和弦简谱','赞美之泉','生命诗歌','迦南诗选','赞美诗(新编)','补充本'];
-const normBook=x=>String(x||'').replace(/[《》\s()（）]/g,'').toLowerCase();
+const COMMON_BOOKS=['灵栖清泉','挖晒谱','和弦简谱','赞美之泉','生命诗歌','迦南诗选','赞美诗(新编)','补充本'];
+const normBook=x=>String(x||'').replace(/[《》\s()（）]/g,'').replace(/硒/g,'晒').toLowerCase();
 const bookMatch=(a,b)=>{ a=normBook(a); b=normBook(b); return !!a&&!!b&&(a.includes(b)||b.includes(a)); };
 function selBookName(){ return $('bookName').value.trim(); }
 function bookIdByName(nm){
   if(!nm) return null;
   if(/^\d+$/.test(nm.trim())) return Number(nm); const m=loadBooks();
-  const hit=Object.keys(m).find(id=>normBook(m[id])===normBook(nm))||Object.keys(m).find(id=>bookMatch(m[id],nm));
-  return hit==null?null:Number(hit);
+  const ex=Object.keys(m).find(id=>normBook(m[id])===normBook(nm));
+  if(ex!=null) return Number(ex);
+  const part=Object.keys(m).filter(id=>bookMatch(m[id],nm));   // 只有唯一匹配时才按 ID 精确检索
+  return part.length===1?Number(part[0]):null;
 }
 const TAKE_STEPS=[100];   // 与原站一致：每次请求 100 条
 function takeSize(){ return TAKE_STEPS[0]; }
@@ -509,9 +520,13 @@ function filterByBook(rows){
   const nm=selBookName(); if(!nm||bookIdByName(nm)!=null) return rows;
   return rows.filter(r=>bookMatch(r.bookName||r.songbookName||r.mSongbook||r.songbook,nm));
 }
+function chipNames(){
+  const seen=new Set();
+  return [...COMMON_BOOKS,...loadCustom(),...loadNames()].filter(n=>{ const k=normBook(n); if(!k||seen.has(k)) return false; seen.add(k); return true; }).slice(0,30);
+}
 function renderBookSel(){
   const nm=selBookName();
-  const names=allBookNames();
+  const names=chipNames();
   $('bookChips').innerHTML=names.map(n=>`<button type="button" data-n="${escapeHtml(n)}" class="${nm&&normBook(nm)===normBook(n)?'on':''}">${escapeHtml(n)}</button>`).join('');
   $('bookClr').hidden=!nm;
 }
@@ -653,7 +668,11 @@ function updateDevInfo(){
 }
 let lastRegErr = '';
 async function registerDevice(attempt = 0){
-  if (attempt === 0) lastRegErr = '';
+  if (attempt === 0) {
+    lastRegErr = '';
+    let until = 0; try { until = Number(localStorage.getItem('HymnRegCool')||0); } catch {}
+    if (until > Date.now()) { lastRegErr = `注册过于频繁，已暂停自动重试，请约 ${Math.ceil((until-Date.now())/60000)} 分钟后再试（期间反复点击只会延长等待）`; return null; }
+  }
   if (!hasCrypto()) return null;
   const base = $('apiBase').value.trim().replace(/\/+$/, '');
   if (!base) return null;
@@ -687,6 +706,7 @@ async function registerDevice(attempt = 0){
   } catch (err) {
     console.error('[registerDevice]', err);
     lastRegErr = (err && err.message) || String(err);
+    if (/频繁|too\s*many|rate/i.test(lastRegErr)) { try { localStorage.setItem('HymnRegCool', String(Date.now()+10*60*1000)); } catch {} }
     return null;
   }
 }
@@ -1731,7 +1751,7 @@ function showSug(){
   const box=$('bookSug'), q=selBookName();
   const nq=normBook(q);
   const all=allBookNames();
-  sugList=[...all.filter(n=>nq&&normBook(n).includes(nq)),...all.filter(n=>!nq||!normBook(n).includes(nq))];
+  sugList=[...all.filter(n=>nq&&normBook(n).includes(nq)),...all.filter(n=>!nq||!normBook(n).includes(nq))].slice(0,60);
   sugIdx=-1;
   if(!sugList.length){ box.hidden=true; return; }
   const hl=n=>{ if(!q) return escapeHtml(n); const i=n.toLowerCase().indexOf(q.toLowerCase()); return i<0?escapeHtml(n):escapeHtml(n.slice(0,i))+'<b>'+escapeHtml(n.slice(i,i+q.length))+'</b>'+escapeHtml(n.slice(i+q.length)); };
@@ -1814,7 +1834,7 @@ $('registerBtn').addEventListener('click', async ()=>{
     const r = await registerDevice(); updateDevInfo();
     if (r && r.hasSecret) showStatus('设备已重新注册，可以开始搜索。');
     else if (r) showStatus('设备已注册但未拿到密钥，签名头不全，取图可能仍失败。');
-    else showStatus('设备注册失败：检查 API 地址是否可达、是否被 CORS 拦截。');
+    else showStatus('设备注册失败：'+(lastRegErr||'检查 API 地址是否可达、是否被 CORS 拦截。')+(/Failed to fetch|NetworkError|Load failed/i.test(lastRegErr)?'\n这通常是网络不可达、证书问题或服务器拒绝了跨域请求，不是页面代码问题。':''));
   } finally { $('registerBtn').disabled = false; }
 });
 
@@ -1826,6 +1846,7 @@ $('registerBtn').addEventListener('click', async ()=>{
 })();
 (async ()=>{
   loadSettings();
+  loadBookFile();
   syncClear();
   try{
     const qs=new URLSearchParams(location.search);
