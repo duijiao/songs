@@ -226,6 +226,10 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#0b1220;color:#dbeafe
 .bk-card:active{transform:scale(.98)}
 .bk-cover img{opacity:0;transition:opacity .45s ease}
 .bk-cover img.ld{opacity:1}
+/* 有封面图时不显示「暂无封面图」占位：加载中只留一个轻微闪动的图标，加载成功后完全隐藏；失败或没有图才显示文字 */
+.bk-cover:has(img:not(.ld)) span{display:none}
+.bk-cover:has(img:not(.ld)) svg{animation:bkpulse 1.2s ease-in-out infinite}
+.bk-cover.has-img svg,.bk-cover.has-img span,.bk-cover:has(img.ld) svg,.bk-cover:has(img.ld) span{display:none}
 .bk-skel{display:flex;gap:12px;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:12px;animation:bkin .45s cubic-bezier(.2,.8,.2,1) backwards;animation-delay:var(--d,0ms)}
 .bk-skel .bk-cover,.bk-skel .ln{position:relative;overflow:hidden;background-color:var(--soft)}
 .bk-skel .bk-cover::after,.bk-skel .ln::after{content:"";position:absolute;inset:0;background:linear-gradient(100deg,transparent 30%,#ffffffb0 50%,transparent 70%);transform:translateX(-100%);animation:sweep 1.3s ease-in-out infinite;animation-delay:var(--d,0ms)}
@@ -233,7 +237,7 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#0b1220;color:#dbeafe
 .bk-skel .ln{height:14px;border-radius:7px}.bk-skel .ln.s{width:55%}.bk-skel .ln.xs{width:35%;height:12px}
 .bkd{animation:rise .35s ease-out}
 @media (prefers-color-scheme:dark){.bk-skel .bk-cover::after,.bk-skel .ln::after{opacity:.18}.bk-skel .bk-cover,.bk-skel .ln{background-color:#1c2845}}
-@media (prefers-reduced-motion:reduce){.bk-card,.bk-skel,.bkd,.bk-skel .bk-cover::after,.bk-skel .ln::after{animation:none!important}.bk-cover img{transition:none}}
+@media (prefers-reduced-motion:reduce){.bk-cover svg{animation:none!important}.bk-card,.bk-skel,.bkd,.bk-skel .bk-cover::after,.bk-skel .ln::after{animation:none!important}.bk-cover img{transition:none}}
 
 /* favorites + search history */
 .title-row{display:flex;align-items:flex-start;gap:8px}
@@ -1952,7 +1956,7 @@ function refreshBookTools(){
 }
 function coverHtml(c){
   return c
-    ? `<img src="${escapeHtml(c)}" alt="" loading="lazy" referrerpolicy="no-referrer" onload="this.classList.add('ld')" onerror="this.remove()">${bkIcon}<span>暂无封面图</span>`
+    ? `<img src="${escapeHtml(c)}" alt="" loading="lazy" referrerpolicy="no-referrer" onload="this.classList.add('ld');this.parentNode.classList.add('has-img')" onerror="this.remove()">${bkIcon}<span>暂无封面图</span>`
     : `${bkIcon}<span>暂无封面图</span>`;
 }
 // 说明：img 加载成功后盖住占位图；失败则移除，露出占位
