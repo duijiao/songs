@@ -239,6 +239,36 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#0b1220;color:#dbeafe
 @media (prefers-color-scheme:dark){.bk-skel .bk-cover::after,.bk-skel .ln::after{opacity:.18}.bk-skel .bk-cover,.bk-skel .ln{background-color:#1c2845}}
 @media (prefers-reduced-motion:reduce){.bk-cover svg{animation:none!important}.bk-card,.bk-skel,.bkd,.bk-skel .bk-cover::after,.bk-skel .ln::after{animation:none!important}.bk-cover img{transition:none}}
 
+/* 新手引导 */
+.gear.help{font-size:21px;font-weight:800;line-height:1}
+.gd{position:fixed;inset:0;z-index:3000}
+.gd[hidden]{display:none}
+.gd-hole{position:fixed;border-radius:14px;box-shadow:0 0 0 9999px rgba(8,16,36,.64),0 0 0 3px #ffffffd9;transition:left .35s cubic-bezier(.2,.8,.2,1),top .35s cubic-bezier(.2,.8,.2,1),width .35s cubic-bezier(.2,.8,.2,1),height .35s cubic-bezier(.2,.8,.2,1);pointer-events:none}
+.gd-card{position:fixed;width:min(390px,calc(100vw - 24px));max-height:calc(100vh - 24px);overflow:auto;background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:18px;padding:16px 18px 14px;box-shadow:0 18px 50px #0a142e55;transition:left .3s ease,top .3s ease,opacity .2s ease;animation:rise .3s ease-out}
+.gd-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
+.gd-step{font-size:12.5px;color:var(--muted,#64748b);font-weight:650}
+.gd-skip{background:none;color:var(--muted,#64748b);padding:4px 8px;font-weight:600;font-size:13.5px}
+.gd-skip:hover{background:var(--soft)}
+.gd-card h3{margin:2px 0 8px;font-size:18px;line-height:1.35}
+.gd-body{font-size:14.5px;line-height:1.7}
+.gd-body p{margin:0 0 8px}
+.gd-body ul,.gd-body ol{margin:0 0 8px;padding-left:0;list-style:none;display:grid;gap:7px}
+.gd-body ol{counter-reset:g}
+.gd-body li{position:relative;padding-left:26px}
+.gd-body ol li{counter-increment:g}
+.gd-body ol li::before{content:counter(g);position:absolute;left:0;top:2px;width:19px;height:19px;border-radius:50%;background:var(--blue);color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.gd-body ul li::before{content:"";position:absolute;left:6px;top:.68em;width:7px;height:7px;border-radius:50%;background:var(--blue)}
+.gd-body b{color:var(--blue)}
+.gd-body .tip{font-size:13px;color:var(--muted,#64748b);background:var(--soft);border-radius:10px;padding:7px 10px}
+.gd-go{width:100%;margin-top:4px}
+.gd-dots{display:flex;gap:6px;justify-content:center;margin:12px 0 10px}
+.gd-dots i{width:7px;height:7px;border-radius:50%;background:var(--line);transition:.2s}
+.gd-dots i.on{width:20px;border-radius:4px;background:var(--blue)}
+.gd-act{display:flex;gap:10px}
+.gd-act button{flex:1}
+@media (max-width:600px){.gd-card{left:12px!important;right:12px;bottom:12px;top:auto!important;width:auto;max-height:54vh}}
+@media (prefers-reduced-motion:reduce){.gd-hole,.gd-card{transition:none;animation:none}}
+
 /* favorites + search history */
 .title-row{display:flex;align-items:flex-start;gap:8px}
 .title-row h3{flex:1;min-width:0}
@@ -355,7 +385,8 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#0b1220;color:#dbeafe
         <h1>专属歌谱搜索</h1>
         <p>让每一首赞美都能被找到</p>
       </div>
-      <button class="gear" id="settingsBtn" type="button" aria-label="设置" hidden><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.488.488 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58ZM12 15.6A3.6 3.6 0 1 1 12 8.4a3.6 3.6 0 0 1 0 7.2Z"/></svg></button>
+      <button class="gear help" id="guideBtn" type="button" aria-label="使用指南" title="使用指南">?</button>
+        <button class="gear" id="settingsBtn" type="button" aria-label="设置" hidden><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.488.488 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58ZM12 15.6A3.6 3.6 0 1 1 12 8.4a3.6 3.6 0 0 1 0 7.2Z"/></svg></button>
     </div>
     <div class="searchbar">
       <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
@@ -491,6 +522,17 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#0b1220;color:#dbeafe
   <div id="moreWrap" style="text-align:center;margin-top:16px" hidden><button id="moreBtn" class="ghost" type="button">加载更多</button></div>
 </main>
 
+<!-- 新手引导 -->
+<div class="gd" id="guide" hidden role="dialog" aria-modal="true" aria-labelledby="gdTitle">
+  <div class="gd-hole" id="gdHole"></div>
+  <div class="gd-card" id="gdCard">
+    <div class="gd-top"><span class="gd-step" id="gdStep"></span><button type="button" class="gd-skip" id="gdSkip">跳过</button></div>
+    <h3 id="gdTitle"></h3>
+    <div class="gd-body" id="gdBody"></div>
+    <div class="gd-dots" id="gdDots"></div>
+    <div class="gd-act"><button type="button" class="ghost" id="gdPrev">上一步</button><button type="button" id="gdNext">下一步</button></div>
+  </div>
+</div>
 <!-- 大图查看器 -->
 <div class="lb" id="lb" hidden>
   <div class="lb-bar">
@@ -540,6 +582,15 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#0b1220;color:#dbeafe
 <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"
   onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/crypto-js@4.2.0/crypto-js.min.js'"></script>
 <script>
+/* 新手引导：只有「第一次访问」才自动弹出。本地没有任何旧数据（设置、收藏、历史、设备 ID 等）才算新用户，之前访问过的不算 */
+const GUIDE_KEY = 'HymnGuide.v1';
+const GUIDE_FIRST = (()=>{
+  try{
+    if (localStorage.getItem(GUIDE_KEY)) return false;
+    const old = ['HymnSettings.v1','HymnBooks.v1','HymnBookNames.v1','HymnBookCustom.v1','HymnFavs.v1','HymnHistory.v1','HymnBg','HymnDeviceId','HymnDeviceId.v2','HymnRegCool','HymnAdmin','HymnAdminEmail'];
+    return !old.some(k=>localStorage.getItem(k)!=null);
+  }catch{ return false; }   // 存储被禁用时无法记住「看过」，宁可不弹，避免每次都打扰
+})();
 const $ = id => document.getElementById(id);
 let latestResults = [];
 let currentLyricsText = '';
@@ -2206,6 +2257,107 @@ $('admDel').addEventListener('click', async ()=>{
   lg.addEventListener('click',()=>{ clearTimeout(t); n++; t=setTimeout(()=>n=0,1500);
     if(n>=5){ n=0; const g=$('settingsBtn'); g.hidden=false; try{ localStorage.setItem('HymnAdmin','1'); }catch{} refreshBookTools(); showStatus('已进入管理模式：设置按钮已显示，歌本分类里可管理歌本。'); } });
 })();
+/* ---- 新手引导 ---- */
+const GUIDE_STEPS = [
+  { title:'欢迎来到专属歌谱搜索 👋', target:null,
+    body:'<p>在这里可以查找歌谱、歌词，也可以按歌本一本一本地翻。</p><p>接下来 5 步，带你认识怎么用，大约 30 秒。</p>' },
+  { title:'① 先在这里输入关键词', target:'.searchbar',
+    body:'<p>输入<b>歌名、歌手、歌词片段</b>或<b>歌谱号</b>，按回车或点「搜索」就行。</p><p class="tip">搜过的词会出现在搜索框下方，点一下就能再次搜索。</p>' },
+  { title:'② 选择在哪里搜', target:'#srcSeg',
+    body:'<ul>'
+      +'<li><b>全部</b>：同时搜诗歌本接口、赞美网和诗歌库，结果一次看全。</li>'
+      +'<li><b>诗歌本接口</b>：搜歌名、歌手、歌词、歌谱号。选中后搜索框下会多出「歌本」一栏，输入歌本名（如 灵栖清泉）就只在这一本里找，留空则搜全部歌本。</li>'
+      +'<li><b>赞美网接口</b>：搜歌名或歌词；点「按圣经经文检索」可以直接输入经文，如 约翰福音3:16。</li>'
+      +'<li><b>诗歌库</b>：本站自己收录的歌谱库。</li>'
+      +'<li><b>歌本分类</b>和<b>我的收藏</b>：见接下来两步。</li></ul>' },
+  { title:'③ 歌本分类：按歌本翻谱', target:'#srcSeg button[data-src="book"]',
+    body:'<ol>'
+      +'<li>点「歌本分类」，会列出本站收录的所有歌本。</li>'
+      +'<li>想找某一本？在顶部搜索框输入<b>歌本名或编号</b>即可。</li>'
+      +'<li>点进一本歌本后，在「输入第几首」里填歌号（如 123）直接找到那一首；留空则显示这本书的全部歌谱。</li>'
+      +'<li>点「‹ 返回歌本」回到歌本列表。</li></ol>'
+      +'<button type="button" class="ghost gd-go" data-go="book">带我去歌本分类看看 ›</button>' },
+  { title:'④ 看谱、收藏', target:null,
+    body:'<ul>'
+      +'<li>搜到结果后，点卡片上的「<b>放大</b>」（或直接点图片）看大图；放大后<b>左右滑动</b>可以切换上一首 / 下一首。</li>'
+      +'<li>大图顶部可以「收藏」「歌词」「保存」，手机上也可以长按图片保存。</li>'
+      +'<li>收藏的歌谱都在「<b>我的收藏</b>」里，保存在这台设备的浏览器中，可以导出 JSON 备份。</li></ul>' },
+  { title:'准备好啦 🎵', target:null,
+    body:'<p>现在就试试：输入一首歌名，点「搜索」。</p><p class="tip">以后想再看这份指南，点页面右上角的「？」就可以。</p>' }
+];
+let gdI = 0, gdOn = false;
+function startGuide(){
+  if (gdOn) return;
+  gdOn = true; gdI = 0; $('guide').hidden = false;
+  try{ localStorage.setItem(GUIDE_KEY,'1'); }catch{}
+  renderGuide();
+}
+function endGuide(){
+  if (!gdOn) return;
+  gdOn = false; $('guide').hidden = true;
+  try{ localStorage.setItem(GUIDE_KEY,'1'); }catch{}
+  window.scrollTo({ top:0 });
+  const k = $('keyword'); if (k && !k.disabled) { try{ k.focus({ preventScroll:true }); }catch{} }
+}
+function renderGuide(){
+  const st = GUIDE_STEPS[gdI], n = GUIDE_STEPS.length;
+  $('gdStep').textContent = `${gdI+1} / ${n}`;
+  $('gdTitle').textContent = st.title;
+  $('gdBody').innerHTML = st.body;
+  $('gdDots').innerHTML = GUIDE_STEPS.map((_,i)=>`<i class="${i===gdI?'on':''}"></i>`).join('');
+  $('gdPrev').hidden = gdI===0;
+  $('gdNext').textContent = gdI===n-1 ? '开始使用' : (gdI===0 ? '开始了解' : '下一步');
+  $('gdSkip').hidden = gdI===n-1;
+  $('gdCard').scrollTop = 0;
+  placeGuide();
+  try{ $('gdNext').focus({ preventScroll:true }); }catch{}
+}
+function placeGuide(){
+  if (!gdOn) return;
+  const st = GUIDE_STEPS[gdI], hole = $('gdHole'), card = $('gdCard');
+  const narrow = window.innerWidth <= 600, M = 12, PAD = 8;
+  let t = st.target ? document.querySelector(st.target) : null;
+  if (t && !t.offsetParent && t !== document.body) t = null;   // 目标不可见（如被隐藏）就退化为居中说明
+  if (t) {
+    t.scrollIntoView({ block:'nearest', inline:'center' });
+    let r = t.getBoundingClientRect();
+    if (r.top < 8 || r.bottom > window.innerHeight - 8) { window.scrollBy(0, r.top - 80); r = t.getBoundingClientRect(); }
+    hole.style.cssText = `left:${r.left-PAD}px;top:${r.top-PAD}px;width:${r.width+PAD*2}px;height:${r.height+PAD*2}px`;
+    if (!narrow) {
+      const cw = card.offsetWidth, ch = card.offsetHeight;
+      let left = Math.min(Math.max(r.left + r.width/2 - cw/2, M), window.innerWidth - cw - M);
+      let top = r.bottom + PAD + 14;
+      if (top + ch > window.innerHeight - M) top = r.top - PAD - 14 - ch;
+      if (top < M) top = Math.max(M, (window.innerHeight - ch) / 2);
+      card.style.left = left + 'px'; card.style.top = top + 'px';
+    }
+  } else {
+    hole.style.cssText = `left:${window.innerWidth/2}px;top:${window.innerHeight/2}px;width:0;height:0`;
+    if (!narrow) {
+      const cw = card.offsetWidth, ch = card.offsetHeight;
+      card.style.left = Math.max(M,(window.innerWidth-cw)/2)+'px'; card.style.top = Math.max(M,(window.innerHeight-ch)/2)+'px';
+    }
+  }
+}
+$('gdNext').addEventListener('click', ()=>{ if (gdI >= GUIDE_STEPS.length-1) endGuide(); else { gdI++; renderGuide(); } });
+$('gdPrev').addEventListener('click', ()=>{ if (gdI > 0) { gdI--; renderGuide(); } });
+$('gdSkip').addEventListener('click', endGuide);
+$('gdBody').addEventListener('click', e=>{
+  const g = e.target.closest('.gd-go'); if (!g) return;
+  endGuide();
+  const b = document.querySelector(`#srcSeg button[data-src="${g.dataset.go}"]`); if (b) b.click();
+});
+$('guideBtn').addEventListener('click', startGuide);
+document.addEventListener('keydown', e=>{
+  if (!gdOn) return;
+  if (e.key==='Escape') { e.preventDefault(); endGuide(); }
+  else if (e.key==='ArrowRight') { e.preventDefault(); $('gdNext').click(); }
+  else if (e.key==='ArrowLeft') { e.preventDefault(); $('gdPrev').click(); }
+}, true);
+window.addEventListener('resize', placeGuide);
+['wheel','touchmove'].forEach(ev=>$('guide').addEventListener(ev, e=>{ if (!e.target.closest('.gd-card')) e.preventDefault(); }, { passive:false }));
+if (GUIDE_FIRST) setTimeout(startGuide, 900);
+
 (async ()=>{
   loadSettings();
   loadBookFile();
