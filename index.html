@@ -24,33 +24,49 @@ input,select{width:100%;border:1px solid #d6deea;border-radius:10px;padding:10px
 input:focus,select:focus{border-color:var(--blue);box-shadow:0 0 0 3px #2563eb22}
 
 /* header */
-.top{position:relative;background:linear-gradient(180deg,#1e3a8a 0%,#3b82f6 42%,#bfdbfe 82%,var(--bg) 100%);background-size:cover;background-position:center top;color:#fff;padding:22px 16px 18px}
+.top{position:relative;--hd-a:#d3e2fb;--hd-b:#e9f0fc;
+  background:radial-gradient(120% 100% at 0% 0%,var(--hd-a) 0%,transparent 62%),linear-gradient(180deg,var(--hd-b) 0%,var(--bg) 100%);
+  background-size:cover;background-position:center top;color:var(--ink);padding:18px 16px 12px}
+@media (prefers-color-scheme:dark){.top{--hd-a:#1d2f58;--hd-b:#142039}}
 .top-in{max-width:1180px;margin:auto}
 .brand{display:flex;align-items:center;gap:14px}
-.logo{width:64px;height:64px;border-radius:18px;background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px #1e3a8a40;flex:none}
-.logo svg{width:40px;height:40px}
+.logo{width:58px;height:58px;border-radius:17px;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 20px #2563eb40;flex:none}
+.logo svg{width:100%;height:100%;display:block}
 .brand-t{flex:1;min-width:0}
-.brand h1{margin:0;font-size:32px;line-height:1.15;letter-spacing:1px;text-shadow:0 2px 12px #0f172a66}
-.brand p{margin:4px 0 0;font-size:15px;color:#eef4ff;text-shadow:0 1px 8px #0f172a77}
-.gear{background:#ffffff38;color:#fff;width:42px;height:42px;padding:0;border-radius:50%;font-size:18px;flex:none;backdrop-filter:blur(6px)}
-.gear:hover{background:#ffffff55}
-.searchbar{position:relative;display:flex;align-items:center;gap:10px;margin-top:18px;background:var(--card);border-radius:999px;padding:7px 7px 7px 20px;box-shadow:0 10px 30px #1e3a8a33}
-.searchbar .ico{width:24px;height:24px;color:#7b8aa3;flex:none}
-.searchbar input{flex:1;border:0!important;box-shadow:none!important;background:transparent!important;padding:12px 4px;font-size:17px;border-radius:0}
-.searchbar button{padding:0 30px;height:48px;border-radius:999px;font-size:17px;background:linear-gradient(135deg,#3b82f6,var(--blue-d));box-shadow:0 6px 16px #2563eb55;white-space:nowrap}
-.seg{display:inline-flex;overflow-x:auto;scrollbar-width:none;gap:4px;margin-top:16px;padding:5px;border-radius:999px;background:color-mix(in srgb,var(--card) 82%,transparent);backdrop-filter:blur(10px);box-shadow:0 6px 20px #1e3a8a22;max-width:100%}
-.seg button{display:flex;align-items:center;gap:8px;background:transparent;color:var(--muted);padding:10px 22px;font-size:16px;border-radius:999px;white-space:nowrap}
-.seg button svg{width:22px;height:22px;flex:none}
-.seg button:hover{background:#2563eb14}
-.seg button.on{background:linear-gradient(135deg,#3b82f6,var(--blue-d));color:#fff;box-shadow:0 6px 14px #2563eb44}
+.brand h1{margin:0;font-size:28px;line-height:1.2;letter-spacing:1px;font-weight:800;color:var(--ink)}
+.brand p{margin:2px 0 0;font-size:14.5px;color:var(--muted)}
+.top.hasbg .brand h1{color:#fff;text-shadow:0 2px 12px #0f172a99}
+.top.hasbg .brand p{color:#eef4ff;text-shadow:0 1px 8px #0f172a99}
+.top.hasbg .status{color:#eef4ff;text-shadow:0 1px 6px #0f172a99}
+.gear{background:var(--card);color:var(--blue);width:44px;height:44px;padding:0;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 14px #2563eb26}
+.gear svg{width:24px;height:24px}
+.gear:hover{background:var(--soft)}
+.searchbar{position:relative;display:flex;align-items:center;gap:8px;margin-top:14px;background:var(--card);border-radius:999px;padding:4px 4px 4px 16px;border:1px solid color-mix(in srgb,var(--line) 70%,transparent);box-shadow:0 6px 18px #2563eb1f}
+.searchbar .ico{width:20px;height:20px;color:#7b8aa3;flex:none}
+.searchbar input{flex:1;border:0!important;box-shadow:none!important;background:transparent!important;padding:6px 2px;font-size:16px;border-radius:0}
+.searchbar button{padding:0 22px;height:38px;border-radius:999px;font-size:15px;background:linear-gradient(135deg,#3b82f6,var(--blue-d));box-shadow:0 4px 12px #2563eb4d;white-space:nowrap}
+.searchbar button.clr{width:26px;height:26px;padding:0;flex:none;border-radius:50%;background:#c3ccdb;color:#fff;box-shadow:none;display:flex;align-items:center;justify-content:center}
+.searchbar button.clr:hover{background:#9aa6ba}
+.searchbar button.clr svg{width:14px;height:14px}
+.seg{display:flex;overflow-x:auto;scrollbar-width:none;gap:10px;margin-top:12px;padding:2px 2px 6px;max-width:100%}
+.seg::-webkit-scrollbar{display:none}
+.seg button{display:flex;align-items:center;gap:7px;flex:none;background:var(--card);color:var(--ink);border:1px solid var(--line);padding:8px 16px;font-size:15px;font-weight:600;border-radius:999px;white-space:nowrap;box-shadow:0 2px 8px #2563eb0f}
+.seg button svg{width:20px;height:20px;flex:none;color:#566175}
+.seg button:hover{background:var(--soft)}
+.seg button.on{background:linear-gradient(135deg,#3b82f6,var(--blue-d));color:#fff;border-color:transparent;box-shadow:0 6px 14px #2563eb44}
+.seg button.on svg{color:#fff}
 .lb-vars{display:flex;align-items:center;gap:6px;overflow-x:auto;scrollbar-width:none;padding:8px 12px;background:#0b1220cc;z-index:2;border-top:1px solid #ffffff14}
 .lb-vars .vl{color:#9fb0cc;font-size:13px;flex:none;font-weight:650}
 .lb-vars button{background:#ffffff1f;padding:6px 13px;font-size:13px;white-space:nowrap;flex:none}
 .lb-vars button.on{background:var(--blue);box-shadow:0 0 0 2px #93c5fd66}
 .lb-tip{position:absolute;left:50%;top:12px;transform:translateX(-50%);background:#2563ebf2;color:#fff;padding:9px 14px;border-radius:12px;font-size:13px;line-height:1.5;z-index:3;max-width:92%;text-align:center;pointer-events:none;transition:opacity .6s;box-shadow:0 6px 20px #0006}
 .lb-tip.fade{opacity:0}
-.seg.sub{margin-top:10px;padding:4px}
-.seg.sub button{padding:7px 18px;font-size:14px}
+.lb-toast{position:absolute;left:50%;bottom:18px;transform:translateX(-50%);background:#111827e6;color:#fff;padding:10px 16px;border-radius:999px;font-size:14px;line-height:1.4;z-index:3;max-width:92%;text-align:center;pointer-events:none;transition:opacity .5s;box-shadow:0 6px 20px #0006;border:1px solid #ffffff22}
+.lb-toast.fade{opacity:0}
+.wx .lb-stage img{pointer-events:auto;-webkit-touch-callout:default;-webkit-user-select:auto;user-select:auto}
+.wx #lbOpen{display:none}
+.seg.sub{margin-top:4px;padding-bottom:4px}
+.seg.sub button{padding:6px 16px;font-size:14px}
 .group-h{grid-column:1/-1;display:flex;align-items:center;gap:10px;font-weight:700;font-size:15px;margin:12px 2px 0}
 .group-h::after{content:"";flex:1;height:1px;background:var(--line)}
 .group-h .cnt{color:var(--muted);font-weight:400;font-size:13px}
@@ -58,7 +74,17 @@ input:focus,select:focus{border-color:var(--blue);box-shadow:0 0 0 3px #2563eb22
 .swipe-hint{display:none}
 @media(pointer:coarse){.swipe-hint{display:inline}}
 .status{font-size:12.5px;white-space:pre-wrap}
-.top .status{color:var(--muted);margin-top:10px;min-height:18px}
+.top .status{color:var(--muted);margin-top:4px;min-height:18px;display:flex;align-items:flex-start;gap:8px}
+.top .status::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--tone,#22c55e);margin-top:6px;flex:none;transition:background .2s}
+.top .status[data-tone=ok]{--tone:#22c55e}
+.top .status[data-tone=load]{--tone:#3b82f6}
+.top .status[data-tone=load]::before{animation:tonepulse 1s ease-in-out infinite}
+.top .status[data-tone=warn]{--tone:#f59e0b;color:#b45309}
+.top .status[data-tone=err]{--tone:#ef4444;color:#dc2626}
+@media (prefers-color-scheme:dark){.top .status[data-tone=warn]{color:#fbbf24}.top .status[data-tone=err]{color:#f87171}}
+@keyframes tonepulse{50%{opacity:.35}}
+@media (prefers-reduced-motion:reduce){.top .status[data-tone=load]::before{animation:none}}
+.top .status:empty::before{display:none}
 
 .wrap{max-width:1180px;margin:auto;padding:16px 14px 60px}
 .panel{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin-bottom:14px;box-shadow:0 4px 18px #17203308}
@@ -134,12 +160,15 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#0b1220;color:#dbeafe
 }
 
 /* favorites + search history */
-.fav-btn{position:absolute;right:8px;top:8px;z-index:3;width:36px;height:36px;padding:0;border-radius:50%;background:#0f172a8c;color:#fff;line-height:1;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(6px);box-shadow:0 2px 8px #0004;transition:background .15s,transform .15s}
-.fav-btn:hover{background:#0f172ab8;transform:scale(1.08)}
-.fav-btn.on{background:#f59e0b;color:#fff}
-.fav-btn.on:hover{background:#d97706}
+.title-row{display:flex;align-items:flex-start;gap:8px}
+.title-row h3{flex:1;min-width:0}
+.fav-btn{flex:none;width:32px;height:32px;margin:-3px -4px 0 0;padding:0;border-radius:50%;background:transparent;color:#9aa6ba;border:1px solid var(--line);line-height:1;display:flex;align-items:center;justify-content:center;transition:background .15s,color .15s,transform .15s}
+.fav-btn:hover{background:var(--soft);color:#f59e0b;transform:scale(1.08)}
+.fav-btn.on{background:#fff4d6;color:#f59e0b;border-color:#f8d98a}
+.fav-btn.on:hover{background:#ffeab0}
+@media (prefers-color-scheme:dark){.fav-btn.on{background:#3a2d10;border-color:#6b5217}}
 .fav-btn svg,#lbFav svg{fill:none;stroke:currentColor;stroke-width:2;stroke-linejoin:round;stroke-linecap:round;flex:none}
-.fav-btn svg{width:20px;height:20px}
+.fav-btn svg{width:18px;height:18px}
 .fav-btn.on svg,#lbFav.on svg{fill:currentColor}
 .fav-btn.pop svg,#lbFav.pop svg{animation:favpop .35s ease-out}
 @keyframes favpop{0%{transform:scale(.6)}55%{transform:scale(1.3) rotate(-8deg)}100%{transform:scale(1)}}
@@ -192,12 +221,13 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#0b1220;color:#dbeafe
   .results{grid-template-columns:repeat(auto-fill,minmax(min(var(--card-min),100%),1fr))}
   .lb-nav{width:38px;height:56px}
   .lb-bar .hide-m{display:none}
-  .top{padding:16px 12px 14px}
-  .logo{width:52px;height:52px;border-radius:15px}.logo svg{width:32px;height:32px}
-  .brand h1{font-size:23px}.brand p{font-size:13px}
-  .searchbar{padding-left:14px;margin-top:14px}.searchbar input{font-size:16px}
-  .searchbar button{padding:0 20px;height:44px;font-size:16px}
-  .seg button{padding:9px 12px;font-size:14px;gap:6px}
+  .top{padding:14px 12px 10px}
+  .logo{width:52px;height:52px;border-radius:15px}
+  .brand h1{font-size:24px}.brand p{font-size:13px}
+  .searchbar{padding-left:14px;margin-top:12px}.searchbar input{font-size:16px}
+  .searchbar button{padding:0 20px;height:38px;font-size:15px}
+  .seg{gap:8px;margin-top:10px}
+  .seg button{padding:8px 14px;font-size:14px;gap:6px}
   .seg button svg{width:18px;height:18px}
 }
 </style>
@@ -208,17 +238,18 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#0b1220;color:#dbeafe
   <div class="top-in">
     <div class="brand">
       <div class="logo">
-        <svg viewBox="0 0 48 48" fill="none"><defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#3b82f6"/><stop offset="1" stop-color="#1d4ed8"/></linearGradient></defs><rect x="4" y="4" width="40" height="40" rx="11" fill="url(#lg)"/><path d="M19 32V15l13-3v17" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><circle cx="16" cy="33" r="4" fill="#fff"/><circle cx="29" cy="30" r="4" fill="#fff"/></svg>
+        <svg viewBox="4 4 40 40" fill="none"><defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#3b82f6"/><stop offset="1" stop-color="#1d4ed8"/></linearGradient></defs><rect x="4" y="4" width="40" height="40" rx="11" fill="url(#lg)"/><path d="M19 32V15l13-3v17" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><circle cx="16" cy="33" r="4" fill="#fff"/><circle cx="29" cy="30" r="4" fill="#fff"/></svg>
       </div>
       <div class="brand-t">
         <h1>专属歌谱搜索</h1>
         <p>让每一首赞美都能被找到</p>
       </div>
-      <button class="gear" id="settingsBtn" type="button" aria-label="设置">⚙</button>
+      <button class="gear" id="settingsBtn" type="button" aria-label="设置" hidden><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.488.488 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58ZM12 15.6A3.6 3.6 0 1 1 12 8.4a3.6 3.6 0 0 1 0 7.2Z"/></svg></button>
     </div>
     <div class="searchbar">
       <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
       <input id="keyword" placeholder="搜索歌名、歌手、歌词或歌谱号" autocomplete="off" enterkeyhint="search">
+      <button id="clearBtn" class="clr" type="button" aria-label="清空" title="清空" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17"/></svg></button>
       <button id="searchBtn" type="button">搜索</button>
       <div class="hist" id="hist" hidden></div>
     </div>
@@ -336,6 +367,7 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#0b1220;color:#dbeafe
     <button id="lbPage" type="button" hidden>1/2 页</button>
     <button id="lbFav" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2.8 2.8 5.9 6.4.8-4.7 4.4 1.2 6.4-5.7-3.1-5.7 3.1 1.2-6.4-4.7-4.4 6.4-.8L12 2.8Z"/></svg><span>收藏</span></button>
     <button id="lbLyrics" type="button">歌词</button>
+    <button id="lbSave" type="button">保存</button>
     <button id="lbOpen" type="button" class="hide-m">新窗口原图</button>
     <button id="lbClose" type="button">✕ 关闭</button>
   </div>
@@ -344,6 +376,7 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#0b1220;color:#dbeafe
     <div class="lb-tip" id="lbTip" hidden></div>
     <img id="lbImg" alt="歌谱原图" draggable="false" referrerpolicy="no-referrer">
     <div class="lb-msg" id="lbMsg"></div>
+    <div class="lb-toast" id="lbToast" hidden></div>
     <button class="lb-nav lb-prev" id="lbPrev" type="button" aria-label="上一首">‹</button>
     <button class="lb-nav lb-next" id="lbNext" type="button" aria-label="下一首">›</button>
   </div>
@@ -381,7 +414,16 @@ let currentLyricsText = '';
 let searchGen = 0;
 
 function escapeHtml(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
-function showStatus(s){$('status').textContent=s}
+function statusTone(s){
+  s=String(s||'');
+  if(/^错误/.test(s)) return 'err';
+  if(s.includes('✕')) return 'warn';
+  if(/失败|无法|被拒|异常/.test(s)) return 'err';
+  if(/没有|未|请先|请填写|请输入|暂无|不全|无签名|不足/.test(s)) return 'warn';
+  if(/^(搜索中|正在|加载|解析)/.test(s)) return 'load';
+  return 'ok';
+}
+function showStatus(s){ const el=$('status'); el.textContent=s; el.dataset.tone=statusTone(s); }
 function hasCrypto(){return typeof CryptoJS !== 'undefined'}
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
 
@@ -428,6 +470,7 @@ function applyBg(){
   top.style.backgroundImage = v
     ? `linear-gradient(180deg,rgba(10,20,50,.30) 0%,rgba(10,20,50,0) 45%,var(--bg) 100%),url("${v.replace(/"/g,'%22')}")`
     : '';
+  top.classList.toggle('hasbg',!!v);
   $('bgUrl').value = v.startsWith('data:') ? '' : v;
 }
 function setBg(v){
@@ -981,10 +1024,9 @@ function renderRows(rows, from=0){
         ${c.images && c.images.length > 1 ? `<span class="pg-badge">${c.images.length} 页</span>` : ''}
         <div class="tmsg">${r._noScore?'该歌曲暂无歌谱<br>可点「原页」查看':'等待加载…'}</div>
         <span class="zoom-badge">🔍 点击放大</span>
-        ${favBtnHtml(r,i)}
       </div>
       <div class="info">
-        <h3>${escapeHtml(name)}</h3>
+        <div class="title-row"><h3>${escapeHtml(name)}</h3>${favBtnHtml(r,i)}</div>
         <div class="meta">
           ${no ? `<span class="pill">编号 ${escapeHtml(no)}</span>` : ''}
           ${r.variants ? `<span class="pill vcnt" ${r.variants.length>1?'':'hidden'}>共 ${r.variants.length} 个谱</span>` : ''}
@@ -1089,6 +1131,31 @@ async function search(){
 
 /* ============== 大图查看器（缩放 / 拖动 / 双击 / 切换） ============== */
 const lb = { tipIdx:-1, tipTimer:0, open:false, idx:-1, page:0, swiping:false, scale:1, x:0, y:0, url:'', pts:new Map(), pinchD:0, pinchS:1, moved:false, lastTap:0, drag:null };
+const IS_WX = /MicroMessenger/i.test(navigator.userAgent);
+if (IS_WX) document.documentElement.classList.add('wx');
+let toastT = 0;
+function lbToast(msg, ms=4500){
+  const t = $('lbToast'); t.textContent = msg; t.hidden = false; t.classList.remove('fade');
+  clearTimeout(toastT);
+  toastT = setTimeout(()=>{ t.classList.add('fade'); setTimeout(()=>{ if (t.classList.contains('fade')) t.hidden = true; }, 520); }, ms);
+}
+async function lbSave(){
+  if (!lb.url) { lbToast('图片还没加载出来，请稍候'); return; }
+  if (IS_WX) { lbToast('请长按图片，在弹出的菜单中选择「保存图片」', 6500); return; }
+  try {
+    const res = await fetch(lb.url); if (!res.ok) throw new Error('http');
+    const blob = await res.blob();
+    const ext = ((blob.type.split('/')[1]||'jpg').replace('jpeg','jpg')).replace(/[^a-z0-9]/gi,'') || 'jpg';
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = ((latestResults[lb.idx]||{}).name||'歌谱') + '.' + ext;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(a.href), 3000);
+    lbToast('已开始保存');
+  } catch {
+    lbToast('无法直接下载，已在新窗口打开原图，可长按或右键另存为', 5500);
+    window.open(lb.url, '_blank', 'noopener');
+  }
+}
 const lbEl=$('lb'), stage=$('lbStage'), lbImg=$('lbImg'), lbMsg=$('lbMsg');
 
 function applyT(){
@@ -1169,10 +1236,11 @@ function prefetchNeighbors(i){
   });
 }
 function openLightbox(i){
+  if (IS_WX) lbToast('长按歌谱图片，可直接保存到手机相册');
   lb.open = true; lbEl.hidden = false; document.body.style.overflow = 'hidden';
   lbShow(i);
 }
-function closeLightbox(){ lb.tipIdx=-1; clearTimeout(lb.tipTimer); $('lbTip').hidden=true; lb.open=false; lbEl.hidden=true; document.body.style.overflow=''; lbImg.removeAttribute('src'); lb.idx=-1; }
+function closeLightbox(){ $('lbToast').hidden=true; lb.tipIdx=-1; clearTimeout(lb.tipTimer); $('lbTip').hidden=true; lb.open=false; lbEl.hidden=true; document.body.style.overflow=''; lbImg.removeAttribute('src'); lb.idx=-1; }
 function lbStep(d){
   let k = lb.idx + d;
   while (k >= 0 && k < latestResults.length && !hasImg(latestResults[k])) k += d;
@@ -1244,6 +1312,7 @@ function lbSetVariant(k){
 }
 $('lbVar').addEventListener('click', ()=>{ const r = latestResults[lb.idx]; if (r) lbSetVariant((r._v||0)+1); });
 $('lbVars').addEventListener('click', e=>{ const b = e.target.closest('button[data-k]'); if (b) lbSetVariant(Number(b.dataset.k)); });
+$('lbSave').addEventListener('click', lbSave);
 $('lbOpen').addEventListener('click', ()=>{ if (lb.url) window.open(lb.url,'_blank','noopener'); });
 $('lbLyrics').addEventListener('click', ()=>{
   const r = latestResults[lb.idx];
@@ -1455,6 +1524,13 @@ function renderHist(){
     + list.map(x=>`<div class="hist-i" data-hact="pick" data-q="${escapeHtml(x)}">${clock}<span class="hist-t">${escapeHtml(x)}</span><span class="hist-x" data-hact="del" data-q="${escapeHtml(x)}" title="删除这条">✕</span></div>`).join('');
   box.hidden=false;
 }
+function syncClear(){ $('clearBtn').hidden = !$('keyword').value; }
+$('keyword').addEventListener('input',syncClear);
+$('clearBtn').addEventListener('mousedown',e=>e.preventDefault());
+$('clearBtn').addEventListener('click',()=>{
+  $('keyword').value=''; syncClear(); $('keyword').focus(); renderHist();
+  if(source==='fav') showFavs('');
+});
 $('keyword').addEventListener('focus',renderHist);
 $('keyword').addEventListener('input',renderHist);
 $('keyword').addEventListener('blur',()=>setTimeout(hideHist,200));
@@ -1465,7 +1541,7 @@ $('hist').addEventListener('click',e=>{
   const a=t.dataset.hact;
   if(a==='clear'){ hist=[]; saveHist(); hideHist(); }
   else if(a==='del'){ hist=hist.filter(x=>x!==t.dataset.q); saveHist(); renderHist(); }
-  else if(a==='pick'){ $('keyword').value=t.dataset.q; hideHist(); search(); }
+  else if(a==='pick'){ $('keyword').value=t.dataset.q; syncClear(); hideHist(); search(); }
 });
 loadFavs(); loadHist(); updateFavCount();
 
@@ -1553,6 +1629,8 @@ $('registerBtn').addEventListener('click', async ()=>{
 /* ============== 启动 ============== */
 (async ()=>{
   loadSettings();
+  syncClear();
+  try{ if(new URLSearchParams(location.search).has('settings')) $('settingsBtn').hidden=false; }catch{}
   if (source === 'fav') { showFavs($('keyword').value.trim()); return; }
   if (source !== 'hymn') { showStatus(({all:'三个来源',lib:'诗歌库',azm:'赞美网'}[source])+'已就绪，输入关键词开始搜索。'); return; }
   if (!hasCrypto()) { showStatus('CryptoJS 未加载成功，请检查网络或刷新页面。'); updateDevInfo(); return; }
