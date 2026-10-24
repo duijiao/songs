@@ -266,6 +266,13 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#0b1220;color:#dbeafe
 .gd-dots i.on{width:20px;border-radius:4px;background:var(--blue)}
 .gd-act{display:flex;gap:10px}
 .gd-act button{flex:1}
+.gd-load{display:flex;align-items:center;gap:10px;padding:10px 2px;color:var(--muted,#64748b);font-size:14px}
+.gd-load i{width:18px;height:18px;border-radius:50%;border:3px solid var(--line);border-top-color:var(--blue);animation:gdspin .8s linear infinite;flex:none}
+@keyframes gdspin{to{transform:rotate(360deg)}}
+.gd-chip{display:inline-block;background:var(--soft);color:var(--blue);border-radius:999px;padding:2px 10px;font-size:12.5px;font-weight:700;margin-bottom:6px}
+body.gd-pad{padding-bottom:62vh}
+.gd-card button:disabled{opacity:.5;cursor:default}
+@media (prefers-reduced-motion:reduce){.gd-load i{animation-duration:2s}}
 @media (max-width:600px){.gd-card{left:12px!important;right:12px;bottom:12px;top:auto!important;width:auto;max-height:54vh}}
 @media (prefers-reduced-motion:reduce){.gd-hole,.gd-card{transition:none;animation:none}}
 
@@ -2257,96 +2264,201 @@ $('admDel').addEventListener('click', async ()=>{
   lg.addEventListener('click',()=>{ clearTimeout(t); n++; t=setTimeout(()=>n=0,1500);
     if(n>=5){ n=0; const g=$('settingsBtn'); g.hidden=false; try{ localStorage.setItem('HymnAdmin','1'); }catch{} refreshBookTools(); showStatus('已进入管理模式：设置按钮已显示，歌本分类里可管理歌本。'); } });
 })();
-/* ---- 新手引导 ---- */
+/* ---- 新手引导（实操版）：自动替用户搜一首歌，把每个来源都试一遍 ---- */
+const GUIDE_DEMO = '吹起复兴的风';
+const gdSleep = ms => new Promise(r=>setTimeout(r,ms));
+let gdI = 0, gdOn = false, gdTok = 0, gdTouched = false, gdNoBooks = false, gdPrev = null;
+
+/* 等一次搜索 / 列表加载结束（搜索时会禁用搜索按钮并显示骨架屏） */
+async function gdWait(ms=25000){
+  const t0 = Date.now(); let ok = 0;
+  await gdSleep(600);
+  while (Date.now()-t0 < ms) {
+    const R = $('results');
+    const busy = $('searchBtn').disabled || !$('progress').hidden || R.querySelector('.skel,.bk-skel')
+      || /正在搜索/.test($('resultTitle').textContent) || /已切换到/.test(R.textContent);
+    if (!busy) { if (++ok >= 3) return true; } else ok = 0;
+    await gdSleep(250);
+  }
+  return false;
+}
+async function gdType(el, text){
+  gdTouched = true;
+  if (el.value !== text) { el.value = ''; for (const ch of text) { el.value += ch; await gdSleep(70); } }
+  el.dispatchEvent(new Event('input',{bubbles:true})); hideHist(); syncClear();
+}
+const gdTab = src => document.querySelector(`#srcSeg button[data-src="${src}"]`);
+/* 切到某个来源并搜索（已在该来源就直接重搜） */
+async function gdSearchOn(src){
+  gdTouched = true; hideHist();
+  if ($('keyword').value.trim() !== GUIDE_DEMO) { $('keyword').value = GUIDE_DEMO; syncClear(); }
+  if (source !== src) gdTab(src).click(); else search();
+  await gdWait();
+  const R = $('results'), n = R.querySelectorAll('.song:not(.skel)').length;
+  return { n, title: $('resultTitle').textContent };
+}
+const gdSummary = c => c.n ? `搜到 <b>${c.n}</b> 条结果` : '这次没有搜到结果（可能是网络较慢或接口暂时不可用，平时遇到可以点「搜索」重试，或换个来源）';
+/* 歌本分类：列出全部歌本，再按第一本的名字过滤给用户看 */
+async function gdBookList(){
+  gdTouched = true; hideHist();
+  $('keyword').value = ''; syncClear(); bookCur = null;
+  if (source !== 'book') gdTab('book').click(); else search();
+  await gdWait();
+  const m = /共\s*(\d+)\s*本/.exec($('resultTitle').textContent);
+  const total = m ? Number(m[1]) : 0;
+  const first = document.querySelector('#results .bk-card h3');
+  gdNoBooks = !first;
+  let name = '';
+  if (first) { name = first.textContent.trim(); await gdType($('keyword'), name); search(); await gdWait(); }
+  return { total, name };
+}
+
 const GUIDE_STEPS = [
-  { title:'欢迎来到专属歌谱搜索 👋', target:null,
-    body:'<p>在这里可以查找歌谱、歌词，也可以按歌本一本一本地翻。</p><p>接下来 5 步，带你认识怎么用，大约 30 秒。</p>' },
-  { title:'① 先在这里输入关键词', target:'.searchbar',
-    body:'<p>输入<b>歌名、歌手、歌词片段</b>或<b>歌谱号</b>，按回车或点「搜索」就行。</p><p class="tip">搜过的词会出现在搜索框下方，点一下就能再次搜索。</p>' },
-  { title:'② 选择在哪里搜', target:'#srcSeg',
-    body:'<ul>'
-      +'<li><b>全部</b>：同时搜诗歌本接口、赞美网和诗歌库，结果一次看全。</li>'
-      +'<li><b>诗歌本接口</b>：搜歌名、歌手、歌词、歌谱号。选中后搜索框下会多出「歌本」一栏，输入歌本名（如 灵栖清泉）就只在这一本里找，留空则搜全部歌本。</li>'
-      +'<li><b>赞美网接口</b>：搜歌名或歌词；点「按圣经经文检索」可以直接输入经文，如 约翰福音3:16。</li>'
-      +'<li><b>诗歌库</b>：本站自己收录的歌谱库。</li>'
-      +'<li><b>歌本分类</b>和<b>我的收藏</b>：见接下来两步。</li></ul>' },
-  { title:'③ 歌本分类：按歌本翻谱', target:'#srcSeg button[data-src="book"]',
-    body:'<ol>'
-      +'<li>点「歌本分类」，会列出本站收录的所有歌本。</li>'
-      +'<li>想找某一本？在顶部搜索框输入<b>歌本名或编号</b>即可。</li>'
-      +'<li>点进一本歌本后，在「输入第几首」里填歌号（如 123）直接找到那一首；留空则显示这本书的全部歌谱。</li>'
-      +'<li>点「‹ 返回歌本」回到歌本列表。</li></ol>'
-      +'<button type="button" class="ghost gd-go" data-go="book">带我去歌本分类看看 ›</button>' },
-  { title:'④ 看谱、收藏', target:null,
-    body:'<ul>'
-      +'<li>搜到结果后，点卡片上的「<b>放大</b>」（或直接点图片）看大图；放大后<b>左右滑动</b>可以切换上一首 / 下一首。</li>'
-      +'<li>大图顶部可以「收藏」「歌词」「保存」，手机上也可以长按图片保存。</li>'
-      +'<li>收藏的歌谱都在「<b>我的收藏</b>」里，保存在这台设备的浏览器中，可以导出 JSON 备份。</li></ul>' },
-  { title:'准备好啦 🎵', target:null,
-    body:'<p>现在就试试：输入一首歌名，点「搜索」。</p><p class="tip">以后想再看这份指南，点页面右上角的「？」就可以。</p>' }
+  { title:'来，跟我一起搜一首歌 🎵', target:null,
+    body:()=>`<p>下面我会<b>替你真实操作一遍</b>：用《${GUIDE_DEMO}》这首歌，把每个搜索来源都试一遍，再带你逛逛歌本分类。</p><p class="tip">全程约 1 分钟，页面会自动操作，你只要点「下一步」。随时可以跳过。</p>` },
+  { title:'第一步：输入关键词', target:'.searchbar',
+    enter: async()=>{ await gdType($('keyword'), GUIDE_DEMO); },
+    body:()=>`<p>我已经在搜索框里输入了示例歌名<b>${GUIDE_DEMO}</b>。</p><p>平时你可以输入<b>歌名、歌手、歌词片段</b>或<b>歌谱号</b>，按回车或点「搜索」。</p><p class="tip">搜过的词会出现在搜索框下方，点一下就能重搜。</p>` },
+  { title:'试试「诗歌本接口」', target:()=>['#results .song:not(.skel)','#results'],
+    enter:()=>gdSearchOn('hymn'),
+    body:c=>`<span class="gd-chip">已切到：诗歌本接口</span><p>${gdSummary(c)}。</p><ul><li>可搜歌名、歌手、歌词、歌谱号。</li><li>选中它后，搜索框下会多出<b>「歌本」</b>一栏：输入歌本名（如 灵栖清泉）就只在这一本里找，留空则搜全部歌本。</li></ul>` },
+  { title:'试试「赞美网接口」', target:()=>['#results .song:not(.skel)','#results'],
+    enter:()=>gdSearchOn('azm'),
+    body:c=>`<span class="gd-chip">已切到：赞美网接口</span><p>${gdSummary(c)}。</p><ul><li>默认按<b>歌名 / 歌词</b>搜。</li><li>点上方的「按圣经经文检索」，可以直接输入经文（如 约翰福音3:16），找出和这节经文相关的歌谱。</li><li>卡片上的「原页」会打开赞美网的原文页面。</li></ul>` },
+  { title:'试试「诗歌库」', target:()=>['#results .song:not(.skel)','#results'],
+    enter:()=>gdSearchOn('lib'),
+    body:c=>`<span class="gd-chip">已切到：诗歌库</span><p>${gdSummary(c)}。</p><p>这是本站自己收录的歌谱库，搜法和前面一样。</p>` },
+  { title:'试试「全部」', target:()=>['#results .song:not(.skel)','#results'],
+    enter:()=>gdSearchOn('all'),
+    body:c=>`<span class="gd-chip">已切到：全部</span><p>同时搜上面三个来源，结果合在一起：${gdSummary(c)}。</p><p class="tip">不确定歌在哪个来源时，用「全部」最省事。</p>` },
+  { title:'看谱、收藏', target:()=>['#results .song:not(.skel) [data-act="view"]','#results'],
+    enter: async()=>{ if (source==='all' && document.querySelector('#results .song:not(.skel)')) return {}; return gdSearchOn('all'); },
+    body:()=>`<ul><li>点卡片上的<b>「放大」</b>（或直接点图片）看大图；放大后<b>左右滑动</b>切上一首 / 下一首。</li><li>大图顶部可以<b>收藏</b>、看<b>歌词</b>、<b>保存</b>；手机上也可以长按图片保存。</li></ul>` },
+  { title:'歌本分类：按歌本翻谱', target:()=>['#results .bk-card','#results'],
+    enter:()=>gdBookList(),
+    body:c=>c.name
+      ? `<span class="gd-chip">已切到：歌本分类</span><p>点「歌本分类」会列出本站所有歌本（共 <b>${c.total}</b> 本）。</p><p>想找某一本，就在顶部搜索框输入<b>歌本名或编号</b>：我已替你输入「${escapeHtml(c.name)}」，列表里只剩这一本。</p>`
+      : `<span class="gd-chip">已切到：歌本分类</span><p>这里会列出本站所有歌本，可以按<b>歌本名或编号</b>搜索。后台暂时还没有添加歌本，添加后就会出现在这里。</p>` },
+  { title:'进入歌本，按第几首找', needsBooks:true,
+    target:()=>[['#bkdForm','#results .song:not(.skel)'],'#bkdForm'],
+    enter: async()=>{
+      gdTouched = true;
+      if (source!=='book' || !document.querySelector('#results .bk-card')) await gdBookList();
+      const card = document.querySelector('#results .bk-card');
+      if (card) { card.click(); await gdWait(); }
+      if (bookCur) { await gdType($('bkdNo'), '1'); $('bkdForm').dispatchEvent(new Event('submit',{cancelable:true,bubbles:true})); await gdWait(); }
+      return { n: document.querySelectorAll('#results .song:not(.skel)').length };
+    },
+    body:c=>`<p>点进一本歌本后，在<b>「输入第几首」</b>里填歌号（如 123）就能直达那一首；我替你填了 <b>1</b>，下面就是这本书的第 1 首${c.n?'':'（这次没读到，可能是网络较慢）'}。</p><p>留空再点「查找」会显示整本歌谱；点「‹ 返回歌本」回到歌本列表。</p>` },
+  { title:'我的收藏 · 全部完成 🎉', target:'#srcSeg button[data-src="fav"]',
+    enter: async()=>{ gdTouched = true; $('keyword').value=''; syncClear(); bookCur=null; if (source!=='fav') gdTab('fav').click(); await gdSleep(500); },
+    body:()=>`<p>看到喜欢的歌，放大后点<b>「收藏」</b>，就会存到「我的收藏」里。收藏保存在这台设备的浏览器中，可以导出 JSON 备份。</p><p class="tip">点「开始使用」后，页面会回到初始状态。想再看一遍，点右上角的「？」。</p>` }
 ];
-let gdI = 0, gdOn = false;
+
+function gdRestore(){
+  if (!gdTouched || !gdPrev) return;
+  hideHist(); bookCur = null;
+  $('keyword').value = ''; syncClear();
+  const want = gdPrev.source;
+  if (source === want) gdTab(want==='lib'?'azm':'lib').click();   // 先切走再切回，清掉演示结果
+  gdTab(want).click();
+  $('keyword').value = gdPrev.keyword; syncClear(); hideHist();
+  hist = gdPrev.hist; saveHist();
+}
 function startGuide(){
   if (gdOn) return;
-  gdOn = true; gdI = 0; $('guide').hidden = false;
+  gdOn = true; gdI = 0; gdTouched = false; gdNoBooks = false;
+  gdPrev = { source, keyword: $('keyword').value, hist: hist.slice() };
+  $('guide').hidden = false; document.body.classList.add('gd-pad');
   try{ localStorage.setItem(GUIDE_KEY,'1'); }catch{}
   renderGuide();
 }
 function endGuide(){
   if (!gdOn) return;
-  gdOn = false; $('guide').hidden = true;
+  gdOn = false; gdTok++; $('guide').hidden = true; document.body.classList.remove('gd-pad');
   try{ localStorage.setItem(GUIDE_KEY,'1'); }catch{}
+  gdRestore();
   window.scrollTo({ top:0 });
-  const k = $('keyword'); if (k && !k.disabled) { try{ k.focus({ preventScroll:true }); }catch{} }
 }
-function renderGuide(){
-  const st = GUIDE_STEPS[gdI], n = GUIDE_STEPS.length;
+function gdStepIndex(from, dir){
+  let i = from + dir;
+  while (GUIDE_STEPS[i] && GUIDE_STEPS[i].needsBooks && gdNoBooks) i += dir;
+  return Math.min(Math.max(i,0), GUIDE_STEPS.length-1);
+}
+async function renderGuide(){
+  const tok = ++gdTok, st = GUIDE_STEPS[gdI], n = GUIDE_STEPS.length;
   $('gdStep').textContent = `${gdI+1} / ${n}`;
   $('gdTitle').textContent = st.title;
-  $('gdBody').innerHTML = st.body;
   $('gdDots').innerHTML = GUIDE_STEPS.map((_,i)=>`<i class="${i===gdI?'on':''}"></i>`).join('');
   $('gdPrev').hidden = gdI===0;
-  $('gdNext').textContent = gdI===n-1 ? '开始使用' : (gdI===0 ? '开始了解' : '下一步');
+  $('gdNext').textContent = gdI===n-1 ? '开始使用' : (gdI===0 ? '开始体验' : '下一步');
   $('gdSkip').hidden = gdI===n-1;
   $('gdCard').scrollTop = 0;
+  let ctx = {};
+  if (st.enter) {
+    $('gdNext').disabled = true;
+    $('gdBody').innerHTML = '<div class="gd-load"><i></i>正在替你操作，请稍候…</div>';
+    placeGuide();
+    try{ ctx = (await st.enter()) || {}; }catch(e){ console.warn('[guide]',e); ctx = {}; }
+    if (tok !== gdTok || !gdOn) return;
+  }
+  $('gdBody').innerHTML = st.body(ctx);
+  $('gdNext').disabled = false;
   placeGuide();
   try{ $('gdNext').focus({ preventScroll:true }); }catch{}
+}
+function gdVisible(sel){
+  const arr = Array.isArray(sel) ? sel : [sel];
+  const els = arr.map(x=>document.querySelector(x)).filter(e=>e && e.getClientRects().length);
+  return els.length === arr.length ? els : null;      // 数组里的元素必须都可见
+}
+function gdResolve(st){
+  // target：选择器字符串；数组 = 这些元素一起高亮；函数 = 返回按优先级排列的候选列表（取第一个全部可见的）
+  const t = st.target; if (!t) return [];
+  const cands = typeof t === 'function' ? t() : [t];
+  for (const c of cands) { const els = gdVisible(c); if (els) return els; }
+  return [];
+}
+function gdUnion(els){
+  const rs = els.map(e=>e.getBoundingClientRect());
+  const l = Math.min(...rs.map(r=>r.left)), tp = Math.min(...rs.map(r=>r.top)), rt = Math.max(...rs.map(r=>r.right)), bt = Math.max(...rs.map(r=>r.bottom));
+  return { left:l, top:tp, right:rt, bottom:bt, width:rt-l, height:bt-tp };
 }
 function placeGuide(){
   if (!gdOn) return;
   const st = GUIDE_STEPS[gdI], hole = $('gdHole'), card = $('gdCard');
-  const narrow = window.innerWidth <= 600, M = 12, PAD = 8;
-  let t = st.target ? document.querySelector(st.target) : null;
-  if (t && !t.offsetParent && t !== document.body) t = null;   // 目标不可见（如被隐藏）就退化为居中说明
-  if (t) {
-    t.scrollIntoView({ block:'nearest', inline:'center' });
-    let r = t.getBoundingClientRect();
-    if (r.top < 8 || r.bottom > window.innerHeight - 8) { window.scrollBy(0, r.top - 80); r = t.getBoundingClientRect(); }
-    hole.style.cssText = `left:${r.left-PAD}px;top:${r.top-PAD}px;width:${r.width+PAD*2}px;height:${r.height+PAD*2}px`;
+  const iw = window.innerWidth, ih = window.innerHeight, narrow = iw <= 600, M = 12, PAD = 8;
+  const clamp = (v,a,b)=>Math.min(Math.max(v,a),Math.max(a,b));
+  const els = gdResolve(st);
+  if (els.length) {
+    els[0].scrollIntoView({ block:'nearest', inline:'center' });
+    let r = gdUnion(els);
+    const sheetTop = narrow ? ih - Math.min(card.offsetHeight, ih*0.54) - M : ih;
+    if (r.top < 70 || r.bottom > sheetTop - 8) { window.scrollBy(0, r.top - 80); r = gdUnion(els); }
+    const top = Math.max(r.top - PAD, 4), bottom = Math.min(r.bottom + PAD, ih - 4);
+    hole.style.cssText = `left:${r.left-PAD}px;top:${top}px;width:${r.width+PAD*2}px;height:${Math.max(bottom-top,0)}px`;
     if (!narrow) {
-      const cw = card.offsetWidth, ch = card.offsetHeight;
-      let left = Math.min(Math.max(r.left + r.width/2 - cw/2, M), window.innerWidth - cw - M);
-      let top = r.bottom + PAD + 14;
-      if (top + ch > window.innerHeight - M) top = r.top - PAD - 14 - ch;
-      if (top < M) top = Math.max(M, (window.innerHeight - ch) / 2);
-      card.style.left = left + 'px'; card.style.top = top + 'px';
+      const cw = card.offsetWidth, ch = card.offsetHeight, gap = PAD + 14;
+      const cx = clamp(r.left + r.width/2 - cw/2, M, iw - cw - M);
+      let left, tp;
+      if (r.bottom + gap + ch <= ih - M)        { left = cx; tp = r.bottom + gap; }
+      else if (r.top - gap - ch >= M)           { left = cx; tp = r.top - gap - ch; }
+      else if (r.right + gap + cw <= iw - M)    { left = r.right + gap; tp = clamp(r.top, M, ih - ch - M); }
+      else if (r.left - gap - cw >= M)          { left = r.left - gap - cw; tp = clamp(r.top, M, ih - ch - M); }
+      else                                      { left = iw - cw - M; tp = ih - ch - M; }
+      card.style.left = left + 'px'; card.style.top = tp + 'px';
     }
   } else {
-    hole.style.cssText = `left:${window.innerWidth/2}px;top:${window.innerHeight/2}px;width:0;height:0`;
+    hole.style.cssText = `left:${iw/2}px;top:${ih/2}px;width:0;height:0`;
     if (!narrow) {
       const cw = card.offsetWidth, ch = card.offsetHeight;
-      card.style.left = Math.max(M,(window.innerWidth-cw)/2)+'px'; card.style.top = Math.max(M,(window.innerHeight-ch)/2)+'px';
+      card.style.left = Math.max(M,(iw-cw)/2)+'px'; card.style.top = Math.max(M,(ih-ch)/2)+'px';
     }
   }
 }
-$('gdNext').addEventListener('click', ()=>{ if (gdI >= GUIDE_STEPS.length-1) endGuide(); else { gdI++; renderGuide(); } });
-$('gdPrev').addEventListener('click', ()=>{ if (gdI > 0) { gdI--; renderGuide(); } });
+$('gdNext').addEventListener('click', ()=>{ if (gdI >= GUIDE_STEPS.length-1) endGuide(); else { gdI = gdStepIndex(gdI, 1); renderGuide(); } });
+$('gdPrev').addEventListener('click', ()=>{ if (gdI > 0) { gdI = gdStepIndex(gdI, -1); renderGuide(); } });
 $('gdSkip').addEventListener('click', endGuide);
-$('gdBody').addEventListener('click', e=>{
-  const g = e.target.closest('.gd-go'); if (!g) return;
-  endGuide();
-  const b = document.querySelector(`#srcSeg button[data-src="${g.dataset.go}"]`); if (b) b.click();
-});
 $('guideBtn').addEventListener('click', startGuide);
 document.addEventListener('keydown', e=>{
   if (!gdOn) return;
