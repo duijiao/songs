@@ -324,6 +324,36 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#0b1220;color:#dbeafe
 .lb-foot{display:flex;justify-content:center;align-items:center;gap:8px;padding:10px;background:#0b1220cc;z-index:2;font-size:13px;color:#9fb0cc}
 .lb-foot button{background:#ffffff1f;padding:6px 14px}
 
+/* 投屏 */
+#lbCast.on{background:#16a34a!important}
+.cast-menu{position:absolute;top:58px;right:10px;z-index:6;width:min(310px,calc(100% - 20px));background:#111a2c;border:1px solid #ffffff22;border-radius:16px;padding:12px;box-shadow:0 14px 40px #000a;color:#e6ecf7;display:flex;flex-direction:column;gap:8px}
+.cast-menu strong{font-size:15px}
+.cast-menu button{width:100%;background:#ffffff1f;font-size:14px;padding:9px 12px}
+.cast-menu button:hover{background:#ffffff38}
+.cast-menu button.pri{background:var(--blue)}
+.cast-menu button.pri:hover{background:var(--blue-d)}
+.cast-menu button.danger{background:#dc2626}
+.cast-menu .row2{display:flex;gap:8px}
+.cast-menu .cast-st{font-size:12.5px;color:#9fb0cc;line-height:1.55;white-space:pre-wrap}
+.cast-menu .cast-st.ok{color:#4ade80}
+.cast-menu .cast-st.bad{color:#fbbf24}
+.cast-menu .cast-tip{font-size:12px;color:#8393ad;line-height:1.55}
+.cast-pill{position:fixed;right:14px;bottom:14px;z-index:90;display:flex;align-items:center;gap:10px;background:#111827ee;color:#fff;border-radius:999px;padding:6px 8px 6px 14px;font-size:13px;box-shadow:0 8px 24px #0006;border:1px solid #ffffff22}
+.cast-pill::before{content:"";width:8px;height:8px;border-radius:50%;background:#22c55e;animation:tonepulse 1.2s ease-in-out infinite}
+.cast-pill button{padding:5px 12px;font-size:13px;background:#dc2626}
+/* 接收端（投屏显示窗口 ?present=1） */
+html.recv,html.recv body{background:#000;overflow:hidden;height:100%}
+html.recv body>*:not(#recv):not(script){display:none!important}
+#recv{position:fixed;inset:0;background:#000;display:flex;align-items:center;justify-content:center;overflow:hidden;color:#9fb0cc;font:16px system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;cursor:none;user-select:none;-webkit-user-select:none}
+#recv.nofs{cursor:pointer}
+#recv img{max-width:100%;max-height:100%;object-fit:contain;background:#fff;transform-origin:center center;transition:transform .07s linear;visibility:hidden;pointer-events:none}
+#recvBlack{position:absolute;inset:0;background:#000;opacity:0;pointer-events:none;transition:opacity .25s}
+#recvBlack.on{opacity:1}
+#recvMsg{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);text-align:center;line-height:1.8;padding:0 24px;pointer-events:none}
+#recvMsg:empty{display:none}
+#recvHint{position:absolute;left:50%;bottom:22px;transform:translateX(-50%);background:#ffffff1f;color:#dbe6ff;border-radius:999px;padding:8px 18px;font-size:14px;pointer-events:none;white-space:nowrap}
+#recvHint[hidden]{display:none!important}
+
 /* lyrics modal */
 .modal{position:fixed;inset:0;z-index:110;background:#0008;display:flex;align-items:flex-end;justify-content:center}
 .sheet{background:var(--card);width:min(720px,100%);max-height:86vh;border-radius:20px 20px 0 0;padding:16px 18px 20px;display:flex;flex-direction:column;box-shadow:0 -10px 40px #0005}
@@ -548,10 +578,19 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#0b1220;color:#dbeafe
     <button id="lbVar" type="button" hidden>谱 1/2</button>
     <button id="lbPage" type="button" hidden>1/2 页</button>
     <button id="lbFav" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2.8 2.8 5.9 6.4.8-4.7 4.4 1.2 6.4-5.7-3.1-5.7 3.1 1.2-6.4-4.7-4.4 6.4-.8L12 2.8Z"/></svg><span>收藏</span></button>
+    <button id="lbCast" type="button">投屏</button>
     <button id="lbLyrics" type="button">歌词</button>
     <button id="lbSave" type="button">保存</button>
     <button id="lbOpen" type="button" class="hide-m">新窗口原图</button>
     <button id="lbClose" type="button">✕ 关闭</button>
+  </div>
+  <div class="cast-menu" id="castMenu" hidden>
+    <strong>投屏到第三方屏幕</strong>
+    <div class="cast-st" id="castSt">选择一种方式，歌谱会全屏显示在目标屏幕上，并实时同步翻页、缩放和拖动。</div>
+    <button type="button" class="pri" id="castLocal">投到外接显示器 / 投影仪</button>
+    <button type="button" id="castWireless" hidden>无线投屏（Chromecast 等设备）</button>
+    <div class="row2"><button type="button" id="castBlack" disabled>黑屏</button><button type="button" class="danger" id="castStop" disabled>停止投屏</button></div>
+    <div class="cast-tip">外接屏：已连接 HDMI / 无线显示后点上方按钮，新窗口会自动移到副屏，在副屏上点一下即全屏。键盘 B 键可快速黑屏。</div>
   </div>
   <div class="lb-vars" id="lbVars" hidden></div>
   <div class="lb-stage" id="lbStage">
@@ -572,6 +611,14 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#0b1220;color:#dbeafe
   </div>
 </div>
 
+<div class="cast-pill" id="castPill" hidden><span>投屏中</span><button type="button" id="castPillStop">停止</button></div>
+<!-- 投屏接收端（仅 ?present=1 时显示） -->
+<div id="recv" class="nofs" hidden>
+  <img id="recvImg" alt="" referrerpolicy="no-referrer" draggable="false">
+  <div id="recvMsg">等待歌谱…</div>
+  <div id="recvBlack"></div>
+  <div id="recvHint">点击屏幕任意位置进入全屏 · 双击切换</div>
+</div>
 <!-- 歌词弹层 -->
 <div class="modal" id="lyricsPanel" hidden>
   <div class="sheet">
@@ -600,6 +647,8 @@ const GUIDE_FIRST = (()=>{
   }catch{ return false; }   // 存储被禁用时无法记住「看过」，宁可不弹，避免每次都打扰
 })();
 const $ = id => document.getElementById(id);
+const IS_RECV = new URLSearchParams(location.search).has('present');   // 投屏接收端：只显示歌谱
+if (IS_RECV) document.documentElement.classList.add('recv');
 let latestResults = [];
 let currentLyricsText = '';
 let searchGen = 0;
@@ -1478,6 +1527,7 @@ function applyT(){
   lbImg.style.transform = `translate(${lb.x}px,${lb.y}px) scale(${lb.scale})`;
   $('lbZoom').textContent = Math.round(lb.scale*100)+'%';
   stage.style.cursor = lb.scale>1 ? '' : 'zoom-in';
+  castView();
 }
 function resetView(){ lb.scale=1; lb.x=0; lb.y=0; applyT(); }
 function zoomAt(factor, cx, cy){
@@ -1537,7 +1587,7 @@ async function lbShow(i, force=false, page){
     const url = await getRowImage(row, page, force);
     if (lb.idx !== i) return;
     lb.url = url;
-    lbImg.onload = ()=>{ if(lb.idx===i){ lbImg.style.visibility='visible'; lbMsg.textContent=''; } };
+    lbImg.onload = ()=>{ if(lb.idx===i){ lbImg.style.visibility='visible'; lbMsg.textContent=''; castImgLoaded(); } };
     lbImg.onerror = ()=>{ if(lb.idx===i) lbMsg.textContent = '图片加载失败（链接过期或被拒）。点击屏幕重试。'; };
     lbImg.src = url;
     prefetchNeighbors(i);
@@ -1556,7 +1606,7 @@ function openLightbox(i){
   lb.open = true; lbEl.hidden = false; document.body.style.overflow = 'hidden';
   lbShow(i);
 }
-function closeLightbox(){ $('lbToast').hidden=true; lb.tipIdx=-1; clearTimeout(lb.tipTimer); $('lbTip').hidden=true; lb.open=false; lbEl.hidden=true; document.body.style.overflow=''; lbImg.removeAttribute('src'); lb.idx=-1; }
+function closeLightbox(){ $('castMenu').hidden=true; $('lbToast').hidden=true; lb.tipIdx=-1; clearTimeout(lb.tipTimer); $('lbTip').hidden=true; lb.open=false; lbEl.hidden=true; document.body.style.overflow=''; lbImg.removeAttribute('src'); lb.idx=-1; }
 function lbStep(d){
   let k = lb.idx + d;
   while (k >= 0 && k < latestResults.length && (!hasImg(latestResults[k]) || !rowVisible(latestResults[k]))) k += d;
@@ -1651,7 +1701,178 @@ document.addEventListener('keydown', e=>{
   else if (e.key==='+'||e.key==='=') zoomCenter(1.4);
   else if (e.key==='-') zoomCenter(1/1.4);
   else if (e.key==='0') resetView();
+  else if (e.key==='b'||e.key==='B') { if (castActive()) castToggleBlack(); }
 });
+
+/* ============== 投屏（外接屏全屏窗口 / 无线投屏） ============== */
+const CAST_URL = ()=>new URL('?present=1', location.href).href;
+const cast = { win:null, conn:null, black:false, lastImg:null, timer:0, raf:0 };
+function castActive(){ return !!((cast.win && !cast.win.closed) || (cast.conn && cast.conn.state==='connected')); }
+function castSend(m){
+  if (cast.win && !cast.win.closed) { try{ cast.win.postMessage(m, '*'); }catch{} }
+  if (cast.conn && cast.conn.state==='connected') { try{ cast.conn.send(JSON.stringify(m)); }catch{} }
+}
+function castViewNow(){
+  if (!castActive()) return;
+  const rc = stage.getBoundingClientRect(), z = lb.scale > 1;
+  castSend({ t:'view', s:lb.scale, x:(z&&rc.width)?lb.x/rc.width:0, y:(z&&rc.height)?lb.y/rc.height:0 });
+}
+function castView(){
+  if (cast.raf || !castActive()) return;
+  cast.raf = requestAnimationFrame(()=>{ cast.raf = 0; castViewNow(); });
+}
+function castCapture(){
+  const r = latestResults[lb.idx];
+  if (lb.open && lb.url && r) cast.lastImg = { t:'img', url:lb.url, title:r.name||'' };
+}
+function castImgLoaded(){
+  castCapture();
+  if (castActive() && cast.lastImg) { castSend(cast.lastImg); castViewNow(); }
+}
+function castPushAll(){
+  if (!castActive()) return;
+  if (cast.lastImg) castSend(cast.lastImg);
+  castViewNow();
+  castSend({ t:'black', on:cast.black });
+}
+function castSt(msg, tone){ const el=$('castSt'); el.textContent=msg; el.className='cast-st'+(tone?' '+tone:''); }
+function castUI(){
+  const on = castActive();
+  $('lbCast').classList.toggle('on', on);
+  $('lbCast').textContent = on ? '投屏中' : '投屏';
+  $('castPill').hidden = !on;
+  $('castBlack').disabled = !on; $('castStop').disabled = !on;
+  $('castBlack').textContent = cast.black ? '恢复显示' : '黑屏';
+}
+function castWatch(){
+  clearInterval(cast.timer);
+  cast.timer = setInterval(()=>{
+    if (cast.win && cast.win.closed) cast.win = null;
+    if (cast.conn && cast.conn.state!=='connected') cast.conn = null;
+    if (!castActive()) { clearInterval(cast.timer); cast.black = false; castSt('投屏已结束。'); }
+    castUI();
+  }, 1200);
+}
+function castToggleBlack(){
+  if (!castActive()) return;
+  cast.black = !cast.black; castSend({ t:'black', on:cast.black }); castUI();
+  castSt(cast.black ? '投屏画面已黑屏（歌谱仍在后台同步）。' : '已恢复显示。', 'ok');
+}
+function castStop(){
+  castSend({ t:'close' });
+  if (cast.win && !cast.win.closed) { try{ cast.win.close(); }catch{} }
+  if (cast.conn) { try{ cast.conn.terminate(); }catch{} }
+  cast.win = null; cast.conn = null; cast.black = false; clearInterval(cast.timer);
+  castUI(); castSt('已停止投屏。');
+}
+async function castStartLocal(){
+  if (cast.win && !cast.win.closed) { cast.win.focus(); castPushAll(); return; }
+  // 必须在点击手势里同步 open，否则会被拦截；之后再移动到副屏
+  const w = window.open(CAST_URL(), 'hymnCast', 'popup=yes,width=1280,height=720,left=80,top=60');
+  if (!w) { castSt('弹出窗口被浏览器拦截了，请允许本站的弹出窗口后再试。', 'bad'); return; }
+  cast.win = w; castCapture(); castUI(); castWatch();
+  castSt('已打开投屏窗口，正在查找外接屏幕…');
+  let moved = false;
+  if (window.getScreenDetails) {
+    try {
+      const d = await window.getScreenDetails();
+      const t = d.screens.find(s=>s!==d.currentScreen && !s.isPrimary) || d.screens.find(s=>s!==d.currentScreen);
+      if (t) {
+        w.moveTo(t.availLeft, t.availTop); w.resizeTo(t.availWidth, t.availHeight);
+        moved = true;
+      }
+    } catch {}
+  }
+  const ext = window.screen && window.screen.isExtended;
+  castSt(moved ? '已把投屏窗口放到外接屏幕。在那块屏幕上点一下即可全屏。'
+    : ext === false ? '没检测到外接屏幕。连接投影仪 / 显示器（扩展模式）后，把投屏窗口拖过去，点一下全屏。'
+    : '请把投屏窗口拖到外接屏幕上，再点一下窗口进入全屏。（允许「窗口管理」权限后可自动放置。）', moved ? 'ok' : 'bad');
+  setTimeout(castPushAll, 600);
+}
+function castBindConn(c){
+  cast.conn = c;
+  c.onmessage = e=>{ try{ if (JSON.parse(e.data).t==='hello') castPushAll(); }catch{} };
+  c.onconnect = ()=>{ castUI(); castPushAll(); };
+  const gone = ()=>{ if (cast.conn===c) cast.conn = null; castUI(); };
+  c.onclose = gone; c.onterminate = gone;
+  castCapture(); castUI(); castWatch();
+  castSt('无线投屏已连接。', 'ok');
+  setTimeout(castPushAll, 500);
+}
+async function castStartWireless(){
+  if (!window.PresentationRequest) { castSt('当前浏览器不支持无线投屏，请使用 Chrome / Edge，或改用外接屏方式。', 'bad'); return; }
+  if (!/^https?:$/.test(location.protocol)) { castSt('无线投屏需要通过 http(s) 网址访问页面，本地文件无法使用。', 'bad'); return; }
+  try {
+    const req = new PresentationRequest([CAST_URL()]);
+    castSt('请在弹出的列表里选择投屏设备…');
+    const c = await req.start();
+    castBindConn(c);
+  } catch (err) {
+    const n = err && err.name;
+    castSt(n==='NotFoundError' ? '没有找到可用的投屏设备（需与手机/电脑在同一网络）。'
+      : n==='AbortError' ? '已取消选择设备。' : '无线投屏失败：'+(err.message||err), 'bad');
+  }
+}
+$('lbCast').addEventListener('click', e=>{ e.stopPropagation(); const m=$('castMenu'); m.hidden=!m.hidden; if(!m.hidden){ castUI(); if(!castActive()) castSt('选择一种方式，歌谱会全屏显示在目标屏幕上，并实时同步翻页、缩放和拖动。'); } });
+$('castLocal').addEventListener('click', castStartLocal);
+$('castWireless').addEventListener('click', castStartWireless);
+$('castBlack').addEventListener('click', castToggleBlack);
+$('castStop').addEventListener('click', castStop);
+$('castPillStop').addEventListener('click', castStop);
+$('castWireless').hidden = !window.PresentationRequest;
+$('lb').addEventListener('pointerdown', e=>{ if (!$('castMenu').hidden && !e.target.closest('#castMenu,#lbCast')) $('castMenu').hidden = true; });
+window.addEventListener('message', e=>{ if (!IS_RECV && cast.win && e.source===cast.win && e.data && e.data.t==='hello') castPushAll(); });
+window.addEventListener('beforeunload', ()=>{ if (cast.win && !cast.win.closed) { try{ castSend({ t:'close' }); }catch{} } });
+
+/* ---- 接收端：被投屏的窗口 / 设备上运行 ---- */
+(function(){
+  if (!IS_RECV) return;
+  const R=$('recv'), im=$('recvImg'), msg=$('recvMsg'), blk=$('recvBlack'), hint=$('recvHint');
+  R.hidden = false; document.title = '投屏显示';
+  const conns = [];
+  let st = { s:1, x:0, y:0 };
+  const applyView = ()=>{ im.style.transform = `translate(${st.x*R.clientWidth}px,${st.y*R.clientHeight}px) scale(${st.s})`; };
+  const fsOn = ()=>!!document.fullscreenElement;
+  const syncFs = ()=>{ hint.hidden = fsOn() || !!(navigator.presentation && navigator.presentation.receiver); R.classList.toggle('nofs', !fsOn()); };
+  function onMsg(m){
+    if (!m || typeof m!=='object') return;
+    if (m.t==='img') {
+      if (im.dataset.u !== m.url) {
+        im.dataset.u = m.url; msg.textContent = '';
+        im.onload = ()=>{ im.style.visibility='visible'; msg.textContent=''; };
+        im.onerror = ()=>{ im.style.visibility='hidden'; msg.textContent='歌谱加载失败（链接可能已过期，请在主控端重新翻页）'; };
+        im.src = m.url;
+      }
+    } else if (m.t==='view') {
+      st = { s:Number(m.s)||1, x:Number(m.x)||0, y:Number(m.y)||0 }; applyView();
+    } else if (m.t==='black') {
+      blk.classList.toggle('on', !!m.on);
+    } else if (m.t==='close') {
+      im.style.visibility='hidden'; im.removeAttribute('src'); im.dataset.u=''; msg.textContent='投屏已结束';
+      blk.classList.remove('on');
+      if (fsOn()) document.exitFullscreen().catch(()=>{});
+      setTimeout(()=>{ try{ window.close(); }catch{} }, 400);
+    }
+  }
+  const hello = ()=>{
+    try{ if (window.opener && !window.opener.closed) window.opener.postMessage({ t:'hello' }, '*'); }catch{}
+    conns.forEach(c=>{ try{ c.send(JSON.stringify({ t:'hello' })); }catch{} });
+  };
+  window.addEventListener('message', e=>{ if (e.source === window.opener) onMsg(e.data); });
+  if (navigator.presentation && navigator.presentation.receiver) {
+    navigator.presentation.receiver.connectionList.then(list=>{
+      const add = c=>{ conns.push(c); c.onmessage = e=>{ try{ onMsg(JSON.parse(e.data)); }catch{} }; try{ c.send(JSON.stringify({ t:'hello' })); }catch{} };
+      list.connections.forEach(add); list.onconnectionavailable = e=>add(e.connection);
+    }).catch(()=>{});
+  }
+  const toggleFs = ()=>{ if (fsOn()) document.exitFullscreen().catch(()=>{}); else document.documentElement.requestFullscreen().catch(()=>{}); };
+  R.addEventListener('click', ()=>{ if (!fsOn()) toggleFs(); });
+  R.addEventListener('dblclick', toggleFs);
+  document.addEventListener('keydown', e=>{ if (e.key==='f'||e.key==='F') toggleFs(); });
+  document.addEventListener('fullscreenchange', ()=>{ syncFs(); applyView(); });
+  window.addEventListener('resize', applyView);
+  syncFs(); hello(); setTimeout(hello, 800);
+})();
 
 /* ============== 高级工具：按 ID / 直链 ============== */
 function viewImageById(id){
@@ -2522,9 +2743,10 @@ document.addEventListener('keydown', e=>{
 }, true);
 window.addEventListener('resize', placeGuide);
 ['wheel','touchmove'].forEach(ev=>$('guide').addEventListener(ev, e=>{ if (!e.target.closest('.gd-card')) e.preventDefault(); }, { passive:false }));
-if (GUIDE_FIRST) setTimeout(startGuide, 900);
+if (GUIDE_FIRST && !IS_RECV) setTimeout(startGuide, 900);
 
 (async ()=>{
+  if (IS_RECV) return;   // 投屏接收端不需要初始化搜索功能
   loadSettings();
   loadBookFile();
   syncClear();
