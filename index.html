@@ -48,6 +48,17 @@ input:focus,select:focus{border-color:var(--blue);box-shadow:0 0 0 3px #2563eb22
 .searchbar button.clr{width:26px;height:26px;padding:0;flex:none;border-radius:50%;background:#c3ccdb;color:#fff;box-shadow:none;display:flex;align-items:center;justify-content:center}
 .searchbar button.clr:hover{background:#9aa6ba}
 .searchbar button.clr svg{width:14px;height:14px}
+.bookpick{margin-top:10px}
+.bp-row{display:flex;align-items:center;gap:8px}
+.bookpick label{font-size:13.5px;font-weight:650;color:var(--muted);flex:none}
+.bp-in{position:relative;flex:1;min-width:0}
+.bp-in input{border-radius:999px;padding:7px 34px 7px 14px;font-size:14px;background:var(--card)!important;border:1px solid var(--line)!important}
+.bp-in button{position:absolute;right:6px;top:50%;transform:translateY(-50%);width:22px;height:22px;padding:0;border-radius:50%;background:#c3ccdb;color:#fff;font-size:11px;line-height:1}
+.bp-chips{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;margin-top:8px;padding-bottom:2px}
+.bp-chips::-webkit-scrollbar{display:none}
+.bp-chips button{flex:none;background:var(--card);color:var(--ink);border:1px solid var(--line);padding:5px 13px;font-size:13.5px;font-weight:600;border-radius:999px;white-space:nowrap}
+.bp-chips button:hover{background:var(--soft)}
+.bp-chips button.on{background:linear-gradient(135deg,#3b82f6,var(--blue-d));color:#fff;border-color:transparent}
 .seg{display:flex;overflow-x:auto;scrollbar-width:none;gap:10px;margin-top:12px;padding:2px 2px 6px;max-width:100%}
 .seg::-webkit-scrollbar{display:none}
 .seg button{display:flex;align-items:center;gap:7px;flex:none;background:var(--card);color:var(--ink);border:1px solid var(--line);padding:8px 16px;font-size:15px;font-weight:600;border-radius:999px;white-space:nowrap;box-shadow:0 2px 8px #2563eb0f}
@@ -67,6 +78,15 @@ input:focus,select:focus{border-color:var(--blue);box-shadow:0 0 0 3px #2563eb22
 .wx #lbOpen{display:none}
 .seg.sub{margin-top:4px;padding-bottom:4px}
 .seg.sub button{padding:6px 16px;font-size:14px}
+.bookbar{display:flex;align-items:center;gap:8px;overflow-x:auto;scrollbar-width:none;margin:0 0 12px;padding:2px 2px 6px}
+.bookbar::-webkit-scrollbar{display:none}
+.bookbar .bl{flex:none;font-size:13px;color:var(--muted);font-weight:650}
+.bookbar button{flex:none;display:flex;align-items:center;gap:6px;background:var(--card);color:var(--ink);border:1px solid var(--line);padding:6px 13px;font-size:13.5px;font-weight:600;border-radius:999px;white-space:nowrap}
+.bookbar button:hover{background:var(--soft)}
+.bookbar button i{font-style:normal;font-size:12px;color:var(--muted);background:var(--soft);border-radius:999px;padding:0 7px;min-width:20px;text-align:center}
+.bookbar button.on{background:linear-gradient(135deg,#3b82f6,var(--blue-d));color:#fff;border-color:transparent;box-shadow:0 4px 12px #2563eb44}
+.bookbar button.on i{background:#ffffff33;color:#fff}
+.song.bk-hide,.group-h.bk-hide{display:none}
 .group-h{grid-column:1/-1;display:flex;align-items:center;gap:10px;font-weight:700;font-size:15px;margin:12px 2px 0}
 .group-h::after{content:"";flex:1;height:1px;background:var(--line)}
 .group-h .cnt{color:var(--muted);font-weight:400;font-size:13px}
@@ -253,6 +273,13 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#0b1220;color:#dbeafe
       <button id="searchBtn" type="button">搜索</button>
       <div class="hist" id="hist" hidden></div>
     </div>
+    <div class="bookpick" id="bookPick" hidden>
+      <div class="bp-row">
+        <label for="bookName">歌本</label>
+        <div class="bp-in"><input id="bookName" placeholder="输入歌本名，如 灵栖清泉（留空搜全部歌本）" autocomplete="off" enterkeyhint="search"><button id="bookClr" type="button" aria-label="清除歌本" hidden>✕</button></div>
+      </div>
+      <div class="bp-chips" id="bookChips"></div>
+    </div>
     <div class="seg" id="srcSeg">
       <button type="button" data-src="all"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 4h7v7H4V4Zm9 0h7v7h-7V4ZM4 13h7v7H4v-7Zm9 0h7v7h-7v-7Z"/></svg>全部</button>
       <button type="button" data-src="hymn"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 6.5C10.4 5.4 8.3 5 5.5 5H3v13h2.7c2.6 0 4.7.4 6.3 1.5 1.6-1.1 3.7-1.5 6.3-1.5H21V5h-2.5c-2.8 0-4.9.4-6.5 1.5Z"/></svg>诗歌本接口</button>
@@ -354,6 +381,7 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#0b1220;color:#dbeafe
       <button id="exportBtn" class="ghost" type="button" disabled>导出 JSON</button>
     </div>
   </div>
+  <div class="bookbar" id="bookBar" hidden></div>
   <div id="results" class="results"><div class="empty">输入歌名后开始搜索，歌谱图片会随滚动自动加载。</div></div>
   <details class="rawd" id="rawBox" hidden><summary>查看原始响应（未能识别结果时用于排查）</summary><pre id="rawPre"></pre></details>
   <div id="moreWrap" style="text-align:center;margin-top:16px" hidden><button id="moreBtn" class="ghost" type="button">加载更多</button></div>
@@ -431,7 +459,49 @@ const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
 const SET_KEY='HymnSettings.v1';
 const PERSIST=['apiBase','imageApiBase','bookId','loginName','azmBase','libUrl','libKey'];
 let source='all';
+/* ---- 诗歌本：检索前选择歌本 ---- */
+const BOOKS_KEY='HymnBooks.v1';
+function loadBooks(){ try{ const o=JSON.parse(localStorage.getItem(BOOKS_KEY)||'{}'); return o&&typeof o==='object'?o:{}; }catch{ return {}; } }
+function learnBooks(rows){
+  const m=loadBooks(); let ch=false;
+  (rows||[]).forEach(r=>{
+    const id=r.bookId??r.bookID??r.songbookId??r.mSongbookId; const nm=String(r.bookName||r.songbookName||r.mSongbook||r.songbook||'').replace(/[《》]/g,'').trim();
+    if(id!=null&&id!==''&&Number(id)>0&&nm&&m[id]!==nm){ m[id]=nm; ch=true; }
+  });
+  if(ch){ try{ localStorage.setItem(BOOKS_KEY,JSON.stringify(m)); }catch{} renderBookSel(); }
+}
+const COMMON_BOOKS=['灵栖清泉','挖硒谱','赞美之泉','生命诗歌','迦南诗选','赞美诗(新编)','补充本'];
+const normBook=x=>String(x||'').replace(/[《》\s()（）]/g,'').toLowerCase();
+const bookMatch=(a,b)=>{ a=normBook(a); b=normBook(b); return !!a&&!!b&&(a.includes(b)||b.includes(a)); };
+function selBookName(){ return $('bookName').value.trim(); }
+function bookIdByName(nm){
+  if(!nm) return null; const m=loadBooks();
+  const hit=Object.keys(m).find(id=>normBook(m[id])===normBook(nm))||Object.keys(m).find(id=>bookMatch(m[id],nm));
+  return hit==null?null:Number(hit);
+}
+function effBookId(){
+  const nm=selBookName();
+  if(nm) return bookIdByName(nm)??0;
+  return Number.parseInt($('bookId').value||'0',10)||0;
+}
+function filterByBook(rows){
+  const nm=selBookName(); if(!nm||bookIdByName(nm)!=null) return rows;
+  return rows.filter(r=>bookMatch(r.bookName||r.songbookName||r.mSongbook||r.songbook,nm));
+}
+function renderBookSel(){
+  const nm=selBookName();
+  const names=[...COMMON_BOOKS];
+  Object.values(loadBooks()).forEach(n=>{ if(!names.some(x=>bookMatch(x,n))) names.push(n); });
+  $('bookChips').innerHTML=names.map(n=>`<button type="button" data-n="${escapeHtml(n)}" class="${nm&&normBook(nm)===normBook(n)?'on':''}">${escapeHtml(n)}</button>`).join('');
+  $('bookClr').hidden=!nm;
+}
+function setBook(name){
+  $('bookName').value=name||''; renderBookSel();
+  if($('keyword').value.trim()) search();
+  else showStatus(name?`已选择歌本「${name}」，输入关键词后搜索。`:'已取消歌本限制。');
+}
 function applySource(){
+  $('bookPick').hidden = source!=='hymn';
   document.querySelectorAll('#srcSeg button').forEach(b=>b.classList.toggle('on',b.dataset.src===source));
   ['apiBase','imageApiBase','bookId','loginName','authToken'].forEach(k=>{ $(k).closest('.field').hidden = !(source==='hymn'||source==='all'); });
   $('azmBase').closest('.field').hidden = !(source==='azm'||source==='all');
@@ -940,7 +1010,7 @@ function filterLib(all, keyword){
 async function fetchHymnRows(keyword){
   const base=$('apiBase').value.trim().replace(/\/+$/,'');
   if(!base) throw new Error('未填写诗歌本 API 地址');
-  const bookId=Number.parseInt($('bookId').value||'0',10);
+  const bookId=source==='hymn'?effBookId():Number.parseInt($('bookId').value||'0',10);
   const url=new URL(base+'/image/searchByName');
   url.searchParams.set('key',keyword);
   url.searchParams.set('bookId',String(Number.isFinite(bookId)?bookId:0));
@@ -954,7 +1024,7 @@ async function fetchHymnRows(keyword){
   let data; try{ data=JSON.parse(text); }catch{ data={raw:text}; }
   if(!res.ok) throw new Error(`HTTP ${res.status}：${data.msg||data.message||text.slice(0,100)}`);
   if(data&&data.msg) throw new Error(data.msg);
-  return normalizeRows(data).map(r=>Object.assign({_src:'hymn'},r));
+  const hrows=normalizeRows(data).map(r=>Object.assign({_src:'hymn'},r)); learnBooks(hrows); return source==='hymn'?filterByBook(hrows):hrows;
 }
 async function fetchAzmRows(keyword,page=1){
   if(!$('azmBase').value.trim()) throw new Error('未填写赞美网接口地址');
@@ -1010,7 +1080,7 @@ let io = null;
 function renderRows(rows, from=0){
   const host = $('results');
   if (from===0 && io) io.disconnect();
-  if (!rows.length) { host.innerHTML = '<div class="empty">没有找到结果，可尝试更短的歌名关键词。</div>'; return; }
+  if (!rows.length) { host.innerHTML = '<div class="empty">没有找到结果，可尝试更短的歌名关键词。</div>'; updateBookBar(); return; }
   const html = rows.slice(from).map((r,k)=>{
     const i = from + k;
     const name = r.name || r.title || '(未命名歌谱)';
@@ -1053,7 +1123,51 @@ function renderRows(rows, from=0){
     }, { rootMargin: '400px 0px' });
   }
   host.querySelectorAll('.thumb').forEach(t=>{ if (Number(t.dataset.i) >= from) io.observe(t); });
+  updateBookBar();
 }
+
+/* ---- 按歌本筛选 ---- */
+const NO_BOOK = '未标注歌本';
+let bookSel = '', bookSelQ = '';
+function rowBook(r){ const c = cur(r) || r; return String((c && c.bookName) || (r && r.bookName) || '').trim() || NO_BOOK; }
+function rowVisible(r){ return !bookSel || rowBook(r) === bookSel; }
+function updateBookBar(){
+  const bar = $('bookBar');
+  const cnt = new Map();
+  latestResults.forEach(r=>{ const b = rowBook(r); cnt.set(b, (cnt.get(b)||0) + 1); });
+  const kw = $('keyword').value.trim();
+  if (bookSel && (!cnt.has(bookSel) || bookSelQ !== kw)) bookSel = '';
+  if (cnt.size < 2) { bar.hidden = true; bar.innerHTML = ''; bookSel = ''; applyBookFilter(); return; }
+  const list = [...cnt.entries()].sort((a,b)=> (a[0]===NO_BOOK) - (b[0]===NO_BOOK) || b[1]-a[1] || a[0].localeCompare(b[0],'zh'));
+  bar._books = list.map(x=>x[0]);
+  bar.innerHTML = '<span class="bl">歌本</span>'
+    + `<button type="button" data-b="-1" class="${bookSel?'':'on'}">全部<i>${latestResults.length}</i></button>`
+    + list.map(([b,n],k)=>`<button type="button" data-b="${k}" class="${b===bookSel?'on':''}">${escapeHtml(b)}<i>${n}</i></button>`).join('');
+  bar.hidden = false;
+  applyBookFilter();
+}
+function applyBookFilter(){
+  const host = $('results');
+  host.querySelectorAll('.song').forEach(a=>{
+    const r = latestResults[Number(a.dataset.i)];
+    a.classList.toggle('bk-hide', !!r && !rowVisible(r));
+  });
+  let head = null, any = false;
+  const flush = ()=>{ if (head) head.classList.toggle('bk-hide', !any); };
+  [...host.children].forEach(el=>{
+    if (el.classList.contains('group-h')) { flush(); head = el; any = false; }
+    else if (el.classList.contains('song') && !el.classList.contains('bk-hide')) any = true;
+  });
+  flush();
+}
+$('bookBar').addEventListener('click', e=>{
+  const b = e.target.closest('button[data-b]'); if (!b) return;
+  const k = Number(b.dataset.b);
+  bookSel = k < 0 ? '' : ($('bookBar')._books[k] || '');
+  bookSelQ = $('keyword').value.trim();
+  updateBookBar();
+  window.scrollTo({ top: Math.max(0, $('bookBar').getBoundingClientRect().top + scrollY - 70), behavior: 'smooth' });
+});
 async function loadThumb(fig, gen, force=false){
   const row = latestResults[Number(fig.dataset.i)];
   const id = Number(row?.id);
@@ -1093,7 +1207,7 @@ async function search(){
   if (!base) { showStatus('请填写 API 基础地址。'); return; }
   saveSettings();
   $('moreWrap').hidden = true;
-  const bookId = Number.parseInt($('bookId').value || '0', 10);
+  const bookId = effBookId();
   const url = new URL(base + '/image/searchByName');
   url.searchParams.set('key', keyword);
   url.searchParams.set('bookId', String(Number.isFinite(bookId) ? bookId : 0));
@@ -1114,7 +1228,7 @@ async function search(){
     if (gen !== searchGen) return;
     if (!res.ok) throw new Error(`HTTP ${res.status}：${typeof data === 'object' ? (data.msg || data.message || text) : text}`);
     if (data && data.msg) throw new Error(data.msg);
-    latestResults = normalizeRows(data);
+    latestResults = normalizeRows(data); learnBooks(latestResults); latestResults = filterByBook(latestResults);
     $('resultTitle').textContent = `搜索结果（${latestResults.length} 条）`;
     renderRows(latestResults);
     $('exportBtn').disabled = !latestResults.length;
@@ -1243,7 +1357,7 @@ function openLightbox(i){
 function closeLightbox(){ $('lbToast').hidden=true; lb.tipIdx=-1; clearTimeout(lb.tipTimer); $('lbTip').hidden=true; lb.open=false; lbEl.hidden=true; document.body.style.overflow=''; lbImg.removeAttribute('src'); lb.idx=-1; }
 function lbStep(d){
   let k = lb.idx + d;
-  while (k >= 0 && k < latestResults.length && !hasImg(latestResults[k])) k += d;
+  while (k >= 0 && k < latestResults.length && (!hasImg(latestResults[k]) || !rowVisible(latestResults[k]))) k += d;
   if (k >= 0 && k < latestResults.length) { lbShow(k); return true; }
   return false;
 }
@@ -1566,6 +1680,11 @@ $('bgFile').addEventListener('change', e=>{
 $('settingsBtn').addEventListener('click', ()=>{ const p=$('settingsPanel'); p.hidden=!p.hidden; });
 $('sizeSel').addEventListener('change', ()=>{ applySize(); saveSettings(); });
 ['apiBase','imageApiBase','bookId','loginName','authToken','azmBase','libUrl','libKey'].forEach(k=>$(k).addEventListener('change', saveSettings));
+$('bookChips').addEventListener('click',e=>{ const b=e.target.closest('button[data-n]'); if(!b) return; setBook(selBookName()&&normBook(selBookName())===normBook(b.dataset.n)?'':b.dataset.n); });
+$('bookClr').addEventListener('click',()=>{ setBook(''); $('bookName').focus(); });
+$('bookName').addEventListener('input',renderBookSel);
+$('bookName').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); if($('keyword').value.trim()) search(); else $('keyword').focus(); } });
+renderBookSel();
 document.querySelectorAll('#srcSeg button').forEach(b=>b.addEventListener('click', ()=>{
   if (b.dataset.src === source) return;
   source = b.dataset.src; applySource(); saveSettings();
