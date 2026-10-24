@@ -54,6 +54,11 @@ input:focus,select:focus{border-color:var(--blue);box-shadow:0 0 0 3px #2563eb22
 .bp-in{position:relative;flex:1;min-width:0}
 .bp-in input{border-radius:999px;padding:7px 34px 7px 14px;font-size:14px;background:var(--card)!important;border:1px solid var(--line)!important}
 .bp-in button{position:absolute;right:6px;top:50%;transform:translateY(-50%);width:22px;height:22px;padding:0;border-radius:50%;background:#c3ccdb;color:#fff;font-size:11px;line-height:1}
+.bp-sug{position:absolute;left:0;right:0;top:calc(100% + 6px);z-index:30;background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:0 12px 30px #17203333;max-height:260px;overflow-y:auto;padding:4px}
+.bp-sug div{padding:9px 12px;border-radius:10px;font-size:14.5px;cursor:pointer;display:flex;justify-content:space-between;gap:10px;color:var(--ink)}
+.bp-sug div.act,.bp-sug div:hover{background:var(--soft)}
+.bp-sug b{color:var(--blue);font-weight:700}
+.bp-sug small{color:var(--muted);font-size:12px;flex:none}
 .bp-chips{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;margin-top:8px;padding-bottom:2px}
 .bp-chips::-webkit-scrollbar{display:none}
 .bp-chips button{flex:none;background:var(--card);color:var(--ink);border:1px solid var(--line);padding:5px 13px;font-size:13.5px;font-weight:600;border-radius:999px;white-space:nowrap}
@@ -276,7 +281,7 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#0b1220;color:#dbeafe
     <div class="bookpick" id="bookPick" hidden>
       <div class="bp-row">
         <label for="bookName">歌本</label>
-        <div class="bp-in"><input id="bookName" placeholder="输入歌本名，如 灵栖清泉（留空搜全部歌本）" autocomplete="off" enterkeyhint="search"><button id="bookClr" type="button" aria-label="清除歌本" hidden>✕</button></div>
+        <div class="bp-in"><input id="bookName" placeholder="输入歌本名，如 灵栖清泉（留空搜全部歌本）" autocomplete="off" enterkeyhint="search"><button id="bookClr" type="button" aria-label="清除歌本" hidden>✕</button><div class="bp-sug" id="bookSug" role="listbox" hidden></div></div>
       </div>
       <div class="bp-chips" id="bookChips"></div>
     </div>
@@ -470,7 +475,7 @@ function learnBooks(rows){
   });
   if(ch){ try{ localStorage.setItem(BOOKS_KEY,JSON.stringify(m)); }catch{} renderBookSel(); }
 }
-const COMMON_BOOKS=['灵栖清泉','挖硒谱','赞美之泉','生命诗歌','迦南诗选','赞美诗(新编)','补充本'];
+const COMMON_BOOKS=['灵栖清泉','挖硒谱','和弦简谱','赞美之泉','生命诗歌','迦南诗选','赞美诗(新编)','补充本'];
 const normBook=x=>String(x||'').replace(/[《》\s()（）]/g,'').toLowerCase();
 const bookMatch=(a,b)=>{ a=normBook(a); b=normBook(b); return !!a&&!!b&&(a.includes(b)||b.includes(a)); };
 function selBookName(){ return $('bookName').value.trim(); }
@@ -480,7 +485,21 @@ function bookIdByName(nm){
   const hit=Object.keys(m).find(id=>normBook(m[id])===normBook(nm))||Object.keys(m).find(id=>bookMatch(m[id],nm));
   return hit==null?null:Number(hit);
 }
-function takeSize(){ const nm=selBookName(); return nm&&bookIdByName(nm)==null?500:100; }
+const TAKE_STEPS=[100];   // 与原站一致：每次请求 100 条
+function takeSize(){ return TAKE_STEPS[0]; }
+async function hymnGet(url){
+  let last;
+  for(const t of TAKE_STEPS){
+    url.searchParams.set('take',String(t));
+    const res=await fetch(url.toString(),{method:'GET',headers:makeHeaders()});
+    const text=await res.text();
+    let data; try{ data=JSON.parse(text); }catch{ data={raw:text}; }
+    last={res,text,data};
+    const bad=!res.ok||(data&&data.msg&&!Array.isArray(data));
+    if(!bad||t===TAKE_STEPS[TAKE_STEPS.length-1]) return last;
+  }
+  return last;
+}
 function effBookId(){
   const nm=selBookName();
   if(nm) return bookIdByName(nm)??0;
@@ -492,8 +511,7 @@ function filterByBook(rows){
 }
 function renderBookSel(){
   const nm=selBookName();
-  const names=[...COMMON_BOOKS];
-  Object.values(loadBooks()).forEach(n=>{ if(!names.some(x=>bookMatch(x,n))) names.push(n); });
+  const names=allBookNames();
   $('bookChips').innerHTML=names.map(n=>`<button type="button" data-n="${escapeHtml(n)}" class="${nm&&normBook(nm)===normBook(n)?'on':''}">${escapeHtml(n)}</button>`).join('');
   $('bookClr').hidden=!nm;
 }
@@ -633,7 +651,9 @@ function updateDevInfo(){
   if (!deviceSignId) { el.textContent = '设备：未注册'; return; }
   el.textContent = `设备：${deviceSignId.slice(0,8)}… ${deviceSignSecret ? '已带签名' : '无签名'}`;
 }
+let lastRegErr = '';
 async function registerDevice(attempt = 0){
+  if (attempt === 0) lastRegErr = '';
   if (!hasCrypto()) return null;
   const base = $('apiBase').value.trim().replace(/\/+$/, '');
   if (!base) return null;
@@ -652,12 +672,12 @@ async function registerDevice(attempt = 0){
     if (!r || typeof r !== 'object') throw new Error('注册响应结构异常');
     const status = (r.deviceStatus ?? '').toString();
     if (status === 'unknown') {
-      if (attempt >= 2) return null;
+      if (attempt >= 2) { lastRegErr = '服务器多次返回设备状态 unknown'; return null; }
       try { localStorage.removeItem(KEY_SIGN_ID); } catch {}
       deviceSignId = ''; deviceSignSecret = '';
       return registerDevice(attempt + 1);
     }
-    if (status !== 'ok') return null;
+    if (status !== 'ok') { lastRegErr = '服务器返回设备状态：' + (status || '空'); return null; }
     const newId = (r.deviceId ?? '').toString();
     if (!newId) throw new Error('响应缺少 deviceId');
     const secret = decryptDeviceSecret(newId, (r.deviceSecret ?? '').toString());
@@ -666,6 +686,7 @@ async function registerDevice(attempt = 0){
     return { deviceId: newId, hasSecret: !!secret };
   } catch (err) {
     console.error('[registerDevice]', err);
+    lastRegErr = (err && err.message) || String(err);
     return null;
   }
 }
@@ -1017,13 +1038,10 @@ async function fetchHymnRows(keyword){
   url.searchParams.set('key',keyword);
   url.searchParams.set('bookId',String(Number.isFinite(bookId)?bookId:0));
   url.searchParams.set('musicType','0');
-  url.searchParams.set('take',String(source==='hymn'?takeSize():100));
   if(!deviceSignId) await registerDevice();
-  let res;
-  try{ res=await fetch(url.toString(),{headers:makeHeaders()}); }
+  let res,text,data;
+  try{ ({res,text,data}=await hymnGet(url)); }
   catch{ throw new Error('无法连接（跨域限制或网络不可达）'); }
-  const text=await res.text();
-  let data; try{ data=JSON.parse(text); }catch{ data={raw:text}; }
   if(!res.ok) throw new Error(`HTTP ${res.status}：${data.msg||data.message||text.slice(0,100)}`);
   if(data&&data.msg) throw new Error(data.msg);
   const hrows=normalizeRows(data).map(r=>Object.assign({_src:'hymn'},r)); learnBooks(hrows); return source==='hymn'?filterByBook(hrows):hrows;
@@ -1125,6 +1143,7 @@ function renderRows(rows, from=0){
     }, { rootMargin: '400px 0px' });
   }
   host.querySelectorAll('.thumb').forEach(t=>{ if (Number(t.dataset.i) >= from) io.observe(t); });
+  try{ learnBookNames(rows); }catch{}
   updateBookBar();
 }
 
@@ -1214,7 +1233,6 @@ async function search(){
   url.searchParams.set('key', keyword);
   url.searchParams.set('bookId', String(Number.isFinite(bookId) ? bookId : 0));
   url.searchParams.set('musicType', '0');
-  url.searchParams.set('take', String(takeSize()));
   const gen = ++searchGen;
   queue.length = 0;
   if (!deviceSignId) await registerDevice();
@@ -1224,9 +1242,7 @@ async function search(){
   $('exportBtn').disabled = true;
   showStatus('搜索中…');
   try {
-    const res = await fetch(url.toString(), { method: 'GET', headers: makeHeaders() });
-    const text = await res.text();
-    let data; try { data = JSON.parse(text); } catch { data = { raw: text }; }
+    const { res, text, data } = await hymnGet(url);
     if (gen !== searchGen) return;
     if (!res.ok) throw new Error(`HTTP ${res.status}：${typeof data === 'object' ? (data.msg || data.message || text) : text}`);
     if (data && data.msg) throw new Error(data.msg);
@@ -1235,7 +1251,7 @@ async function search(){
     renderRows(latestResults);
     $('exportBtn').disabled = !latestResults.length;
     showStatus(latestResults.length ? '搜索完成，歌谱图片正在自动加载；点击图片可放大。'
-      : (selBookName() && rawN ? `接口返回的 ${rawN} 条里没有「${selBookName()}」。接口单次有条数上限，歌本较冷门时可能被挤出去：请换更具体的歌名，或在歌本框直接输入该歌本的数字 ID。`
+      : (selBookName() && rawN ? `接口返回的 ${rawN} 条里没有「${selBookName()}」。接口单次返回条数有限，歌本较冷门时可能被挤出去：请换更具体的歌名，或在歌本框直接输入该歌本的数字 ID。`
       : '请求成功，但没有识别到结果数组，可展开“查看原始响应”检查。'));
     if (latestResults.length && selBookName() && bookIdByName(selBookName())==null && rawN>=takeSize()) showStatus(`已在 ${rawN} 条中按歌本名过滤；结果可能不全，建议输入更具体的歌名或该歌本的数字 ID。`);
   } catch (err) {
@@ -1685,9 +1701,62 @@ $('settingsBtn').addEventListener('click', ()=>{ const p=$('settingsPanel'); p.h
 $('sizeSel').addEventListener('change', ()=>{ applySize(); saveSettings(); });
 ['apiBase','imageApiBase','bookId','loginName','authToken','azmBase','libUrl','libKey'].forEach(k=>$(k).addEventListener('change', saveSettings));
 $('bookChips').addEventListener('click',e=>{ const b=e.target.closest('button[data-n]'); if(!b) return; setBook(selBookName()&&normBook(selBookName())===normBook(b.dataset.n)?'':b.dataset.n); });
-$('bookClr').addEventListener('click',()=>{ setBook(''); $('bookName').focus(); });
-$('bookName').addEventListener('input',renderBookSel);
-$('bookName').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); if($('keyword').value.trim()) search(); else $('keyword').focus(); } });
+$('bookClr').addEventListener('click',()=>{ setBook(''); $('bookName').focus(); showSug(); });
+const CUSTOM_KEY='HymnBookCustom.v1';
+function loadCustom(){ try{ const a=JSON.parse(localStorage.getItem(CUSTOM_KEY)||'[]'); return Array.isArray(a)?a:[]; }catch{ return []; } }
+function rememberCustom(nm){
+  nm=(nm||'').trim(); if(!nm||/^\d+$/.test(nm)||allBookNames().some(x=>normBook(x)===normBook(nm))) return;
+  try{ localStorage.setItem(CUSTOM_KEY,JSON.stringify([nm,...loadCustom()].slice(0,20))); }catch{}
+  renderBookSel();
+}
+const NAMES_KEY='HymnBookNames.v1';
+function loadNames(){ try{ const a=JSON.parse(localStorage.getItem(NAMES_KEY)||'[]'); return Array.isArray(a)?a:[]; }catch{ return []; } }
+function learnBookNames(rows){   // 结果里出现过的歌本名（不要求有 ID）
+  const have=loadNames(); let ch=false;
+  (rows||[]).forEach(r=>{
+    const c=(typeof cur==='function'&&cur(r))||r;
+    const nm=String((c&&c.bookName)||r.bookName||r.songbookName||r.mSongbook||r.songbook||'').replace(/[《》]/g,'').trim();
+    if(nm&&nm.length<=30&&!have.some(x=>normBook(x)===normBook(nm))){ have.push(nm); ch=true; }
+  });
+  if(ch){ try{ localStorage.setItem(NAMES_KEY,JSON.stringify(have.slice(-100))); }catch{} renderBookSel(); }
+}
+function allBookNames(){
+  const names=[...COMMON_BOOKS,...loadCustom(),...loadNames()];
+  Object.values(loadBooks()).forEach(n=>names.push(n));
+  const seen=new Set();
+  return names.filter(n=>{ const k=normBook(n); if(!k||seen.has(k)) return false; seen.add(k); return true; });
+}
+let sugIdx=-1, sugList=[];
+function showSug(){
+  const box=$('bookSug'), q=selBookName();
+  const nq=normBook(q);
+  const all=allBookNames();
+  sugList=[...all.filter(n=>nq&&normBook(n).includes(nq)),...all.filter(n=>!nq||!normBook(n).includes(nq))];
+  sugIdx=-1;
+  if(!sugList.length){ box.hidden=true; return; }
+  const hl=n=>{ if(!q) return escapeHtml(n); const i=n.toLowerCase().indexOf(q.toLowerCase()); return i<0?escapeHtml(n):escapeHtml(n.slice(0,i))+'<b>'+escapeHtml(n.slice(i,i+q.length))+'</b>'+escapeHtml(n.slice(i+q.length)); };
+  box.innerHTML=sugList.map((n,k)=>`<div role="option" data-k="${k}">${hl(n)}${bookIdByName(n)!=null?`<small>ID ${bookIdByName(n)}</small>`:''}</div>`).join('');
+  box.hidden=false;
+}
+function hideSug(){ $('bookSug').hidden=true; sugIdx=-1; }
+function pickSug(k){ const n=sugList[k]; if(n==null) return; hideSug(); setBook(n); }
+$('bookName').addEventListener('input',()=>{ renderBookSel(); showSug(); });
+$('bookName').addEventListener('focus',showSug);
+$('bookName').addEventListener('blur',()=>setTimeout(hideSug,150));
+$('bookSug').addEventListener('mousedown',e=>e.preventDefault());
+$('bookSug').addEventListener('click',e=>{ const d=e.target.closest('div[data-k]'); if(d) pickSug(Number(d.dataset.k)); });
+$('bookName').addEventListener('keydown',e=>{
+  const open=!$('bookSug').hidden;
+  if(open&&(e.key==='ArrowDown'||e.key==='ArrowUp')){
+    e.preventDefault(); sugIdx=(sugIdx+(e.key==='ArrowDown'?1:-1)+sugList.length)%sugList.length;
+    [...$('bookSug').children].forEach((c,k)=>c.classList.toggle('act',k===sugIdx));
+  } else if(e.key==='Enter'){
+    e.preventDefault();
+    if(open&&sugIdx>=0){ pickSug(sugIdx); return; }
+    hideSug(); rememberCustom(selBookName()); renderBookSel();
+    if($('keyword').value.trim()) search(); else $('keyword').focus();
+  } else if(e.key==='Escape') hideSug();
+});
 renderBookSel();
 document.querySelectorAll('#srcSeg button').forEach(b=>b.addEventListener('click', ()=>{
   if (b.dataset.src === source) return;
@@ -1750,10 +1819,19 @@ $('registerBtn').addEventListener('click', async ()=>{
 });
 
 /* ============== 启动 ============== */
+(()=>{ // 连续点击 Logo 5 次，显示设置按钮（手机上不用改网址）
+  let n=0,t=0; const lg=document.querySelector('.logo');
+  lg.addEventListener('click',()=>{ clearTimeout(t); n++; t=setTimeout(()=>n=0,1500);
+    if(n>=5){ n=0; const g=$('settingsBtn'); g.hidden=false; showStatus('设置按钮已显示，点右上角齿轮即可打开设置。'); } });
+})();
 (async ()=>{
   loadSettings();
   syncClear();
-  try{ if(new URLSearchParams(location.search).has('settings')) $('settingsBtn').hidden=false; }catch{}
+  try{
+    const qs=new URLSearchParams(location.search);
+    if(qs.has('settings')||qs.has('resetdev')) $('settingsBtn').hidden=false;
+    if(qs.has('resetdev')){ localStorage.removeItem(KEY_LOCAL_ID); localStorage.removeItem(KEY_SIGN_ID); deviceSignId=''; deviceSignSecret=''; }
+  }catch{}
   if (source === 'fav') { showFavs($('keyword').value.trim()); return; }
   if (source !== 'hymn') { showStatus(({all:'三个来源',lib:'诗歌库',azm:'赞美网'}[source])+'已就绪，输入关键词开始搜索。'); return; }
   if (!hasCrypto()) { showStatus('CryptoJS 未加载成功，请检查网络或刷新页面。'); updateDevInfo(); return; }
@@ -1763,7 +1841,7 @@ $('registerBtn').addEventListener('click', async ()=>{
   updateDevInfo();
   if (r && r.hasSecret) showStatus('设备已就绪，输入歌名开始搜索。');
   else if (r) showStatus('设备已注册但未拿到密钥，若报签名错误请在“设置”里点“重新注册设备”。');
-  else showStatus('设备注册未完成：搜索、取图与歌词可能被拒绝。请在“设置”中检查 API 地址或网络/CORS。');
+  else showStatus('设备注册未完成：搜索、取图与歌词可能被拒绝。'+(lastRegErr?'\n原因：'+lastRegErr:'')+'\n请刷新重试；仍失败可在网址后加 ?resetdev=1 重新生成设备，或检查网络。');
 })();
 </script>
 </body>
