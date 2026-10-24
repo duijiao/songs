@@ -475,10 +475,12 @@ const normBook=x=>String(x||'').replace(/[《》\s()（）]/g,'').toLowerCase();
 const bookMatch=(a,b)=>{ a=normBook(a); b=normBook(b); return !!a&&!!b&&(a.includes(b)||b.includes(a)); };
 function selBookName(){ return $('bookName').value.trim(); }
 function bookIdByName(nm){
-  if(!nm) return null; const m=loadBooks();
+  if(!nm) return null;
+  if(/^\d+$/.test(nm.trim())) return Number(nm); const m=loadBooks();
   const hit=Object.keys(m).find(id=>normBook(m[id])===normBook(nm))||Object.keys(m).find(id=>bookMatch(m[id],nm));
   return hit==null?null:Number(hit);
 }
+function takeSize(){ const nm=selBookName(); return nm&&bookIdByName(nm)==null?500:100; }
 function effBookId(){
   const nm=selBookName();
   if(nm) return bookIdByName(nm)??0;
@@ -1015,7 +1017,7 @@ async function fetchHymnRows(keyword){
   url.searchParams.set('key',keyword);
   url.searchParams.set('bookId',String(Number.isFinite(bookId)?bookId:0));
   url.searchParams.set('musicType','0');
-  url.searchParams.set('take','100');
+  url.searchParams.set('take',String(source==='hymn'?takeSize():100));
   if(!deviceSignId) await registerDevice();
   let res;
   try{ res=await fetch(url.toString(),{headers:makeHeaders()}); }
@@ -1212,7 +1214,7 @@ async function search(){
   url.searchParams.set('key', keyword);
   url.searchParams.set('bookId', String(Number.isFinite(bookId) ? bookId : 0));
   url.searchParams.set('musicType', '0');
-  url.searchParams.set('take', '100');
+  url.searchParams.set('take', String(takeSize()));
   const gen = ++searchGen;
   queue.length = 0;
   if (!deviceSignId) await registerDevice();
@@ -1228,12 +1230,14 @@ async function search(){
     if (gen !== searchGen) return;
     if (!res.ok) throw new Error(`HTTP ${res.status}：${typeof data === 'object' ? (data.msg || data.message || text) : text}`);
     if (data && data.msg) throw new Error(data.msg);
-    latestResults = normalizeRows(data); learnBooks(latestResults); latestResults = filterByBook(latestResults);
+    latestResults = normalizeRows(data); learnBooks(latestResults); const rawN = latestResults.length; latestResults = filterByBook(latestResults);
     $('resultTitle').textContent = `搜索结果（${latestResults.length} 条）`;
     renderRows(latestResults);
     $('exportBtn').disabled = !latestResults.length;
     showStatus(latestResults.length ? '搜索完成，歌谱图片正在自动加载；点击图片可放大。'
-      : '请求成功，但没有识别到结果数组，可展开“查看原始响应”检查。');
+      : (selBookName() && rawN ? `接口返回的 ${rawN} 条里没有「${selBookName()}」。接口单次有条数上限，歌本较冷门时可能被挤出去：请换更具体的歌名，或在歌本框直接输入该歌本的数字 ID。`
+      : '请求成功，但没有识别到结果数组，可展开“查看原始响应”检查。'));
+    if (latestResults.length && selBookName() && bookIdByName(selBookName())==null && rawN>=takeSize()) showStatus(`已在 ${rawN} 条中按歌本名过滤；结果可能不全，建议输入更具体的歌名或该歌本的数字 ID。`);
   } catch (err) {
     if (gen !== searchGen) return;
     latestResults = [];
