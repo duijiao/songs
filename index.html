@@ -183,7 +183,7 @@ input:focus,select:focus{border-color:var(--blue);box-shadow:0 0 0 3px #2563eb22
 .acts{display:flex;gap:8px;margin-top:auto;padding-top:6px}
 .acts button{flex:1;padding:8px 6px;font-size:13px}
 .empty{grid-column:1/-1;padding:50px 12px;text-align:center;color:var(--muted)}
-.idle-ico{display:block;width:104px;height:104px;margin:0 auto 14px;object-fit:contain;user-select:none;-webkit-user-select:none;pointer-events:none}
+.idle-ico{display:block;width:min(200px,56vw);height:min(200px,56vw);margin:0 auto 16px;object-fit:contain;user-select:none;-webkit-user-select:none;pointer-events:none}
 svg.idle-ico{color:var(--blue);opacity:.85}
 details.rawd{margin-top:14px;color:var(--muted);font-size:13px}
 pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#0b1220;color:#dbeafe;padding:14px;border-radius:10px;max-height:340px;overflow:auto;font-size:12.5px}
@@ -346,9 +346,10 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#0b1220;color:#dbeafe
 /* 接收端（投屏显示窗口 ?present=1） */
 html.recv,html.recv body{background:#000;overflow:hidden;height:100%}
 html.recv body>*:not(#recv):not(script){display:none!important}
-#recv{position:fixed;inset:0;background:#000;display:flex;align-items:center;justify-content:center;overflow:hidden;color:#9fb0cc;font:16px system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;cursor:none;user-select:none;-webkit-user-select:none}
+#recv{position:fixed;inset:0;background:#000;overflow:hidden;color:#9fb0cc;font:16px system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;cursor:none;user-select:none;-webkit-user-select:none}
 #recv.nofs{cursor:pointer}
-#recv img{max-width:100%;max-height:100%;object-fit:contain;background:#fff;transform-origin:center center;transition:transform .07s linear;visibility:hidden;pointer-events:none}
+#recv{touch-action:none}
+#recv img{position:absolute;left:0;top:0;max-width:none;max-height:none;width:0;height:0;background:#fff;transform-origin:0 0;will-change:transform;visibility:hidden;pointer-events:none}
 #recvBlack{position:absolute;inset:0;background:#000;opacity:0;pointer-events:none;transition:opacity .25s}
 #recvBlack.on{opacity:1}
 #recvMsg{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);text-align:center;line-height:1.8;padding:0 24px;pointer-events:none}
@@ -380,6 +381,9 @@ html.recv body>*:not(#recv):not(script){display:none!important}
   .seg button svg{width:18px;height:18px}
 }
 </style>
+<script>var IDLE_SVG='<svg class="idle-ico" viewBox="0 0 48 48" fill="none" aria-hidden="true"><rect x="4" y="4" width="40" height="40" rx="11" fill="currentColor" opacity=".12"/><path d="M19 32V15l13-3v17" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><circle cx="16" cy="33" r="4" fill="currentColor"/><circle cx="29" cy="30" r="4" fill="currentColor"/></svg>';
+function ssFallback(img){ img.onerror=null; img.outerHTML=IDLE_SVG; }   // ss.png 不存在时换成内置图标
+</script>
 </head>
 <body>
 <div class="progress" id="progress" hidden></div>
@@ -591,8 +595,9 @@ html.recv body>*:not(#recv):not(script){display:none!important}
     <div class="cast-st" id="castSt">选择一种方式，歌谱会全屏显示在目标屏幕上，并实时同步翻页、缩放和拖动。</div>
     <button type="button" class="pri" id="castLocal">投到外接显示器 / 投影仪</button>
     <button type="button" id="castWireless" hidden>无线投屏（Chromecast 等设备）</button>
+    <button type="button" id="castFit">显示方式：宽度填充屏幕</button>
     <div class="row2"><button type="button" id="castBlack" disabled>黑屏</button><button type="button" class="danger" id="castStop" disabled>停止投屏</button></div>
-    <div class="cast-tip">外接屏：已连接 HDMI / 无线显示后点上方按钮，新窗口会自动移到副屏，在副屏上点一下即全屏。键盘 B 键可快速黑屏。</div>
+    <div class="cast-tip">外接屏：已连接 HDMI / 无线显示后点上方按钮，新窗口会自动移到副屏，在副屏上点一下即全屏。键盘 B 键可快速黑屏。投屏屏幕本身也能双指缩放、拖动查看细节。</div>
   </div>
   <div class="lb-vars" id="lbVars" hidden></div>
   <div class="lb-stage" id="lbStage">
@@ -619,7 +624,7 @@ html.recv body>*:not(#recv):not(script){display:none!important}
   <img id="recvImg" alt="" referrerpolicy="no-referrer" draggable="false">
   <div id="recvMsg">等待歌谱…</div>
   <div id="recvBlack"></div>
-  <div id="recvHint">点击屏幕任意位置进入全屏 · 双击切换</div>
+  <div id="recvHint">点一下进入全屏 · 双指/滚轮缩放 · 拖动平移 · 双击放大</div>
 </div>
 <!-- 歌词弹层 -->
 <div class="modal" id="lyricsPanel" hidden>
@@ -656,8 +661,6 @@ let currentLyricsText = '';
 let searchGen = 0;
 
 function escapeHtml(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
-const IDLE_SVG='<svg class="idle-ico" viewBox="0 0 48 48" fill="none" aria-hidden="true"><rect x="4" y="4" width="40" height="40" rx="11" fill="currentColor" opacity=".12"/><path d="M19 32V15l13-3v17" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><circle cx="16" cy="33" r="4" fill="currentColor"/><circle cx="29" cy="30" r="4" fill="currentColor"/></svg>';
-function ssFallback(img){ img.onerror=null; img.outerHTML=IDLE_SVG; }   // ss.png 不存在时换成内置图标
 function idleHint(text){ return '<div class="empty"><img class="idle-ico" src="ss.png" alt="" draggable="false" onerror="ssFallback(this)">'+text+'</div>'; }
 function statusTone(s){
   s=String(s||'');
@@ -1711,7 +1714,7 @@ document.addEventListener('keydown', e=>{
 
 /* ============== 投屏（外接屏全屏窗口 / 无线投屏） ============== */
 const CAST_URL = ()=>new URL('?present=1', location.href).href;
-const cast = { win:null, conn:null, black:false, lastImg:null, timer:0, raf:0 };
+const cast = { fit:'width', win:null, conn:null, black:false, lastImg:null, timer:0, raf:0 };
 function castActive(){ return !!((cast.win && !cast.win.closed) || (cast.conn && cast.conn.state==='connected')); }
 function castSend(m){
   if (cast.win && !cast.win.closed) { try{ cast.win.postMessage(m, '*'); }catch{} }
@@ -1719,8 +1722,10 @@ function castSend(m){
 }
 function castViewNow(){
   if (!castActive()) return;
-  const rc = stage.getBoundingClientRect(), z = lb.scale > 1;
-  castSend({ t:'view', s:lb.scale, x:(z&&rc.width)?lb.x/rc.width:0, y:(z&&rc.height)?lb.y/rc.height:0 });
+  const rc = stage.getBoundingClientRect(), ir = lbImg.getBoundingClientRect();
+  if (!rc.width || !ir.width || !ir.height) return;
+  castSend({ t:'view', s:lb.scale, reset:lb.scale<=1,
+    u:((rc.left+rc.width/2)-ir.left)/ir.width, v:((rc.top+rc.height/2)-ir.top)/ir.height, fw:rc.width/ir.width });
 }
 function castView(){
   if (cast.raf || !castActive()) return;
@@ -1738,6 +1743,7 @@ function castPushAll(){
   if (!castActive()) return;
   if (cast.lastImg) castSend(cast.lastImg);
   castViewNow();
+  castSend({ t:'fit', mode:cast.fit });
   castSend({ t:'black', on:cast.black });
 }
 function castSt(msg, tone){ const el=$('castSt'); el.textContent=msg; el.className='cast-st'+(tone?' '+tone:''); }
@@ -1822,6 +1828,11 @@ $('lbCast').addEventListener('click', e=>{ e.stopPropagation(); const m=$('castM
 $('castLocal').addEventListener('click', castStartLocal);
 $('castWireless').addEventListener('click', castStartWireless);
 $('castBlack').addEventListener('click', castToggleBlack);
+$('castFit').addEventListener('click', ()=>{
+  cast.fit = cast.fit==='width' ? 'page' : 'width';
+  $('castFit').textContent = '显示方式：' + (cast.fit==='width' ? '宽度填充屏幕' : '整页适应屏幕');
+  castSend({ t:'fit', mode:cast.fit }); castViewNow();
+});
 $('castStop').addEventListener('click', castStop);
 $('castPillStop').addEventListener('click', castStop);
 $('castWireless').hidden = !window.PresentationRequest;
@@ -1835,25 +1846,52 @@ window.addEventListener('beforeunload', ()=>{ if (cast.win && !cast.win.closed) 
   const R=$('recv'), im=$('recvImg'), msg=$('recvMsg'), blk=$('recvBlack'), hint=$('recvHint');
   R.hidden = false; document.title = '投屏显示';
   const conns = [];
-  let st = { s:1, x:0, y:0 };
-  const applyView = ()=>{ im.style.transform = `translate(${st.x*R.clientWidth}px,${st.y*R.clientHeight}px) scale(${st.s})`; };
+  let fit='width', z=1, cu=.5, cv=.5, topFlag=true, ar=0, cur={left:0,top:0,w:1,h:1};
+  const MAXZ = 10;
+  const bw = ()=>{ const Rw=R.clientWidth, Rh=R.clientHeight; return fit==='page' ? Math.min(Rw, ar? Rh/ar : Rw) : Rw; };
+  function render(){
+    if (!ar) return;
+    const Rw=R.clientWidth, Rh=R.clientHeight, w=bw()*z, h=w*ar;
+    const left = w<=Rw ? (Rw-w)/2 : clamp(Rw/2-cu*w, Rw-w, 0);
+    const top  = h<=Rh ? (Rh-h)/2 : (topFlag ? 0 : clamp(Rh/2-cv*h, Rh-h, 0));
+    cu=(Rw/2-left)/w; cv=(Rh/2-top)/h;
+    im.style.width=w+'px'; im.style.height=h+'px'; im.style.transform=`translate(${left}px,${top}px)`;
+    cur={left,top,w,h};
+  }
+  function setPos(left, top){ cu=(R.clientWidth/2-left)/cur.w; cv=(R.clientHeight/2-top)/cur.h; topFlag=false; render(); }
+  function zoomAt(nz, cx, cy){
+    nz=clamp(nz,1,MAXZ); const p=(cx-cur.left)/cur.w, q=(cy-cur.top)/cur.h;
+    z=nz; const w=bw()*z, h=w*ar; topFlag=false;
+    setPos(cx-p*w, cy-q*h);
+  }
+  const resetZoom = ()=>{ z=1; cu=.5; cv=.5; topFlag=true; render(); };
   const fsOn = ()=>!!document.fullscreenElement;
   const syncFs = ()=>{ hint.hidden = fsOn() || !!(navigator.presentation && navigator.presentation.receiver); R.classList.toggle('nofs', !fsOn()); };
+  const toggleFs = ()=>{ if (fsOn()) document.exitFullscreen().catch(()=>{}); else document.documentElement.requestFullscreen().catch(()=>{}); };
+
   function onMsg(m){
     if (!m || typeof m!=='object') return;
     if (m.t==='img') {
       if (im.dataset.u !== m.url) {
-        im.dataset.u = m.url; msg.textContent = '';
-        im.onload = ()=>{ im.style.visibility='visible'; msg.textContent=''; };
+        im.dataset.u = m.url; msg.textContent = ''; ar = 0; z=1; cu=.5; cv=.5; topFlag=true;
+        im.onload = ()=>{ ar = (im.naturalHeight/im.naturalWidth)||1.4; im.style.visibility='visible'; msg.textContent=''; render(); };
         im.onerror = ()=>{ im.style.visibility='hidden'; msg.textContent='歌谱加载失败（链接可能已过期，请在主控端重新翻页）'; };
         im.src = m.url;
       }
+    } else if (m.t==='fit') {
+      fit = m.mode==='page' ? 'page' : 'width'; render();
     } else if (m.t==='view') {
-      st = { s:Number(m.s)||1, x:Number(m.x)||0, y:Number(m.y)||0 }; applyView();
+      if (m.reset) { z=1; cu=.5; topFlag=true; }
+      else {
+        topFlag=false;
+        z = clamp(fit==='page' ? (Number(m.s)||1) : 1/Math.min(Number(m.fw)||1, 1), 1, MAXZ);
+        cu = Number(m.u); cv = Number(m.v); if (!isFinite(cu)) cu=.5; if (!isFinite(cv)) cv=.5;
+      }
+      render();
     } else if (m.t==='black') {
       blk.classList.toggle('on', !!m.on);
     } else if (m.t==='close') {
-      im.style.visibility='hidden'; im.removeAttribute('src'); im.dataset.u=''; msg.textContent='投屏已结束';
+      im.style.visibility='hidden'; im.removeAttribute('src'); im.dataset.u=''; msg.textContent='投屏已结束'; ar=0;
       blk.classList.remove('on');
       if (fsOn()) document.exitFullscreen().catch(()=>{});
       setTimeout(()=>{ try{ window.close(); }catch{} }, 400);
@@ -1870,12 +1908,55 @@ window.addEventListener('beforeunload', ()=>{ if (cast.win && !cast.win.closed) 
       list.connections.forEach(add); list.onconnectionavailable = e=>add(e.connection);
     }).catch(()=>{});
   }
-  const toggleFs = ()=>{ if (fsOn()) document.exitFullscreen().catch(()=>{}); else document.documentElement.requestFullscreen().catch(()=>{}); };
-  R.addEventListener('click', ()=>{ if (!fsOn()) toggleFs(); });
-  R.addEventListener('dblclick', toggleFs);
-  document.addEventListener('keydown', e=>{ if (e.key==='f'||e.key==='F') toggleFs(); });
-  document.addEventListener('fullscreenchange', ()=>{ syncFs(); applyView(); });
-  window.addEventListener('resize', applyView);
+
+  /* 在投屏屏幕上直接操作：拖动平移、双指/滚轮缩放、双击放大、点一下全屏 */
+  const pts = new Map(); let pinch=null, moved=false, lastTap=0, start={x:0,y:0};
+  R.addEventListener('pointerdown', e=>{
+    try{ R.setPointerCapture(e.pointerId); }catch{}
+    pts.set(e.pointerId, { x:e.clientX, y:e.clientY });
+    if (pts.size===1) { moved=false; start={ x:e.clientX, y:e.clientY }; }
+    if (pts.size===2) { const [a,b]=[...pts.values()]; pinch={ d:Math.hypot(a.x-b.x,a.y-b.y)||1, z, cx:(a.x+b.x)/2, cy:(a.y+b.y)/2 }; moved=true; }
+  });
+  R.addEventListener('pointermove', e=>{
+    const o = pts.get(e.pointerId); if (!o || !ar) return;
+    const prev = { x:o.x, y:o.y }; o.x=e.clientX; o.y=e.clientY;
+    if (pts.size>=2 && pinch) {
+      const [a,b]=[...pts.values()];
+      const d=Math.hypot(a.x-b.x,a.y-b.y)||1, cx=(a.x+b.x)/2, cy=(a.y+b.y)/2;
+      zoomAt(pinch.z*d/pinch.d, cx, cy);
+      setPos(cur.left + (cx-pinch.cx), cur.top + (cy-pinch.cy)); pinch.cx=cx; pinch.cy=cy;
+    } else if (pts.size===1) {
+      const dx=e.clientX-prev.x, dy=e.clientY-prev.y;
+      if (!moved && Math.hypot(e.clientX-start.x, e.clientY-start.y) > 6) moved = true;
+      if (moved) setPos(cur.left+dx, cur.top+dy);
+    }
+  });
+  const up = e=>{
+    if (!pts.has(e.pointerId)) return;
+    pts.delete(e.pointerId);
+    if (pts.size<2) pinch=null;
+    if (pts.size===0 && !moved && e.type==='pointerup') {
+      if (!fsOn()) { toggleFs(); return; }
+      const now=Date.now();
+      if (now-lastTap<320) { lastTap=0; if (z>1.05) resetZoom(); else zoomAt(2.5, e.clientX, e.clientY); }
+      else lastTap=now;
+    }
+  };
+  R.addEventListener('pointerup', up); R.addEventListener('pointercancel', up);
+  R.addEventListener('wheel', e=>{ e.preventDefault(); if (ar) zoomAt(z*Math.exp(-e.deltaY*0.002), e.clientX, e.clientY); }, { passive:false });
+  document.addEventListener('keydown', e=>{
+    const k=e.key, step=R.clientHeight*.2;
+    if (k==='f'||k==='F') toggleFs();
+    else if (k==='+'||k==='=') zoomAt(z*1.25, R.clientWidth/2, R.clientHeight/2);
+    else if (k==='-'||k==='_') zoomAt(z/1.25, R.clientWidth/2, R.clientHeight/2);
+    else if (k==='0') resetZoom();
+    else if (k==='ArrowDown'||k==='PageDown') { setPos(cur.left, cur.top-step); }
+    else if (k==='ArrowUp'||k==='PageUp') { setPos(cur.left, cur.top+step); }
+    else if (k==='ArrowLeft') setPos(cur.left+step, cur.top);
+    else if (k==='ArrowRight') setPos(cur.left-step, cur.top);
+  });
+  document.addEventListener('fullscreenchange', ()=>{ syncFs(); render(); });
+  window.addEventListener('resize', render);
   syncFs(); hello(); setTimeout(hello, 800);
 })();
 
