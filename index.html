@@ -183,6 +183,8 @@ input:focus,select:focus{border-color:var(--blue);box-shadow:0 0 0 3px #2563eb22
 .acts{display:flex;gap:8px;margin-top:auto;padding-top:6px}
 .acts button{flex:1;padding:8px 6px;font-size:13px}
 .empty{grid-column:1/-1;padding:50px 12px;text-align:center;color:var(--muted)}
+.idle-ico{display:block;width:104px;height:104px;margin:0 auto 14px;object-fit:contain;user-select:none;-webkit-user-select:none;pointer-events:none}
+svg.idle-ico{color:var(--blue);opacity:.85}
 details.rawd{margin-top:14px;color:var(--muted);font-size:13px}
 pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#0b1220;color:#dbeafe;padding:14px;border-radius:10px;max-height:340px;overflow:auto;font-size:12.5px}
 .foot{font-size:12px;color:var(--muted);text-align:center;margin-top:18px}
@@ -554,7 +556,7 @@ html.recv body>*:not(#recv):not(script){display:none!important}
     </form>
   </section>
   <div class="bookbar" id="bookBar" hidden></div>
-  <div id="results" class="results"><div class="empty">输入歌名后开始搜索，歌谱图片会随滚动自动加载。</div></div>
+  <div id="results" class="results"><div class="empty"><img class="idle-ico" src="ss.png" alt="" draggable="false" onerror="ssFallback(this)">输入歌名后开始搜索，歌谱图片会随滚动自动加载。</div></div>
   <details class="rawd" id="rawBox" hidden><summary>查看原始响应（未能识别结果时用于排查）</summary><pre id="rawPre"></pre></details>
   <div id="moreWrap" style="text-align:center;margin-top:16px" hidden><button id="moreBtn" class="ghost" type="button">加载更多</button></div>
 </main>
@@ -654,6 +656,9 @@ let currentLyricsText = '';
 let searchGen = 0;
 
 function escapeHtml(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+const IDLE_SVG='<svg class="idle-ico" viewBox="0 0 48 48" fill="none" aria-hidden="true"><rect x="4" y="4" width="40" height="40" rx="11" fill="currentColor" opacity=".12"/><path d="M19 32V15l13-3v17" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><circle cx="16" cy="33" r="4" fill="currentColor"/><circle cx="29" cy="30" r="4" fill="currentColor"/></svg>';
+function ssFallback(img){ img.onerror=null; img.outerHTML=IDLE_SVG; }   // ss.png 不存在时换成内置图标
+function idleHint(text){ return '<div class="empty"><img class="idle-ico" src="ss.png" alt="" draggable="false" onerror="ssFallback(this)">'+text+'</div>'; }
 function statusTone(s){
   s=String(s||'');
   if(/^错误/.test(s)) return 'err';
@@ -2165,7 +2170,7 @@ document.querySelectorAll('#srcSeg button').forEach(b=>b.addEventListener('click
   if (b.dataset.src === source) return;
   source = b.dataset.src; applySource(); saveSettings();
   searchGen++; latestResults = []; queue.length = 0; setProgress(false); $('searchBtn').disabled = false;
-  $('results').innerHTML = '<div class="empty">已切换到' + ({all:'全部来源',azm:'赞美网',lib:'诗歌库',hymn:'诗歌本',book:'歌本分类'}[source]) + '接口，输入歌名开始搜索。</div>';
+  $('results').innerHTML = idleHint('已切换到' + ({all:'全部来源',azm:'赞美网',lib:'诗歌库',hymn:'诗歌本',book:'歌本分类'}[source]) + '接口，输入歌名开始搜索。');
   $('resultTitle').textContent = '搜索结果'; $('exportBtn').disabled = true; $('moreWrap').hidden = true; $('rawBox').hidden = true;
   showStatus('已切换接口。');
   if (source === 'fav' || source === 'book' || $('keyword').value.trim()) search();
@@ -2176,7 +2181,7 @@ $('azmModeBar').addEventListener('click', e=>{
   if (!b || b.dataset.mode === azmMode) return;
   azmMode = b.dataset.mode; applySource(); saveSettings();
   searchGen++; latestResults = []; queue.length = 0; setProgress(false); $('searchBtn').disabled = false;
-  $('results').innerHTML = '<div class="empty">' + (azmMode==='scripture' ? '请输入经文（如 约翰福音3:16），检索与该经文相关的歌谱。' : '输入歌名开始搜索。') + '</div>';
+  $('results').innerHTML = idleHint(azmMode==='scripture' ? '请输入经文（如 约翰福音3:16），检索与该经文相关的歌谱。' : '输入歌名开始搜索。');
   $('resultTitle').textContent = '搜索结果'; $('exportBtn').disabled = true; $('moreWrap').hidden = true; $('rawBox').hidden = true;
   if ($('keyword').value.trim()) search();
 });
@@ -2649,7 +2654,7 @@ function gdRestore(){   // 把页面还原成引导开始前的样子，并撤�
     if (source === 'fav') showFavs('');
     else if (source === 'book') showBooks('');
     else {
-      latestResults = []; $('results').innerHTML = '<div class="empty">输入歌名后开始搜索，歌谱图片会随滚动自动加载。</div>';
+      latestResults = []; $('results').innerHTML = idleHint('输入歌名后开始搜索，歌谱图片会随滚动自动加载。');
       $('resultTitle').textContent = '搜索结果'; $('exportBtn').disabled = true; $('moreWrap').hidden = true; $('rawBox').hidden = true;
       updateBookBar();
     }
