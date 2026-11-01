@@ -645,6 +645,43 @@ html.recv body>*:not(#recv):not(script){display:none!important}
 .bb-v.on{background:#1d2a44}
 .bb-v mark{background:#b45309;color:#fff;border-radius:3px;padding:0 1px}
 .bb-err{color:#fbbf24!important}
+/* ProPresenter 式功能：拖背景、提示信息、拖动排序 */
+.lv-msg{position:absolute;left:0;right:0;bottom:0;z-index:5;display:none;align-items:center;justify-content:center;padding:1.2% 5%;background:rgba(0,0,0,.74);color:#fff;font-weight:700;text-align:center;line-height:1.3;word-break:break-word}
+.pr-card.drop{border-color:#22c55e;box-shadow:0 0 0 3px #22c55e88}
+.pr-bgm{position:absolute;right:0;top:0;z-index:2;background:#0008;color:#fff;font-size:10px;font-style:normal;padding:1px 6px;border-radius:0 0 0 6px;text-shadow:none}
+.pr-bgb[draggable=true]{cursor:grab}
+.pr-item.dragover{outline:2px dashed #22c55e;outline-offset:-2px}
+.pr-item .tt[draggable=true]{cursor:grab}
+.pr-msg{display:flex;flex-direction:column;gap:6px;margin-top:10px}
+.pr-msgrow{display:flex;gap:6px}
+.pr-msgrow input{flex:1;min-width:0}
+.pr-msgrow button{flex:none}
+.pr-keys{margin-top:10px;font-size:12.5px;color:#8ea0bd}
+.pr-keys summary{cursor:pointer;font-weight:650}
+.pr-keys table{border-collapse:collapse;margin-top:6px;width:100%}
+.pr-keys td{padding:2px 6px;border-bottom:1px solid #2a2d33;vertical-align:top}
+.pr-keys td:first-child{white-space:nowrap;color:#dfe3ea;font-weight:700}
+/* 歌单：多选 / 拖动 / 右键菜单 */
+.pr-set{min-height:90px;outline:none;padding-bottom:26px}
+.pr-item{user-select:none;-webkit-user-select:none;position:relative}
+.pr-item input{user-select:text;-webkit-user-select:text}
+.pr-item.msel{background:#253d6a;border-color:#3b82f688}
+.pr-item.on.msel{border-color:var(--blue)}
+.pr-item.dragging{opacity:.4}
+.pr-item.drop-b{box-shadow:0 -5px 0 -1px #22c55e}
+.pr-item.drop-a{box-shadow:0 5px 0 -1px #22c55e}
+.pr-grip{flex:none;cursor:grab;color:#8ea0bd;font-size:15px;line-height:1;padding:2px 3px;letter-spacing:-2px}
+.pr-grip:hover{color:#dfe3ea}
+#prToast{position:fixed;left:50%;transform:translateX(-50%);bottom:24px;z-index:3100;display:flex;align-items:center;gap:14px;background:#1b1d22;color:#dfe3ea;border:1px solid #3a3d44;border-radius:10px;padding:9px 14px;box-shadow:0 10px 30px #0009;font-size:13.5px;max-width:92vw}
+#prToast[hidden],#prCtx[hidden]{display:none}
+#prToast button{padding:4px 12px;font-size:13px}
+#prCtx{position:fixed;z-index:3000;background:#1b1d22;border:1px solid #3a3d44;border-radius:9px;padding:4px;min-width:210px;box-shadow:0 12px 34px #000a;color:#dfe3ea;font-size:13px}
+.ctx-i{display:flex;justify-content:space-between;gap:24px;padding:6px 10px;border-radius:5px;cursor:pointer}
+.ctx-i:hover{background:#2c5fd0;color:#fff}
+.ctx-i kbd{font:inherit;font-size:11.5px;color:#8ea0bd}
+.ctx-i:hover kbd{color:#dbe7ff}
+.ctx-i.dis{opacity:.4;pointer-events:none}
+.ctx-sep{height:1px;background:#33363d;margin:4px 2px}
 </style>
 <script>var IDLE_SVG='<svg class="idle-ico" viewBox="0 0 48 48" fill="none" aria-hidden="true"><rect x="4" y="4" width="40" height="40" rx="11" fill="currentColor" opacity=".12"/><path d="M19 32V15l13-3v17" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><circle cx="16" cy="33" r="4" fill="currentColor"/><circle cx="29" cy="30" r="4" fill="currentColor"/></svg>';
 function ssFallback(img){ img.onerror=null; img.outerHTML=IDLE_SVG; }   // ss.png 不存在时换成内置图标
@@ -1020,6 +1057,28 @@ function ssFallback(img){ img.onerror=null; img.outerHTML=IDLE_SVG; }   // ss.pn
         <button type="button" class="ghost" id="prShDel">删当前谱</button>
         <input type="file" id="prShFile" accept="image/*" multiple hidden>
       </div>
+      <div class="pr-msg">
+        <div class="pr-sec" style="margin:2px 0 0">提示信息条（显示在观众屏底部）</div>
+        <div class="pr-msgrow"><input id="prMsgIn" placeholder="如：请将手机调为静音，回车显示" autocomplete="off" spellcheck="false"><button type="button" id="prMsgBtn">显示信息（M）</button><button type="button" class="ghost" id="prMsgSave" title="把输入框里的话存为常用">＋常用</button></div>
+        <div class="pr-looks" id="prMsgChips"></div>
+      </div>
+      <details class="pr-keys"><summary>快捷键</summary>
+        <table>
+          <tr><td>→ / 空格 / 回车</td><td>下一页</td></tr>
+          <tr><td>← / 退格</td><td>上一页</td></tr>
+          <tr><td>1 – 9</td><td>跳到本首第几页</td></tr>
+          <tr><td>Home / End</td><td>第一页 / 最后一页</td></tr>
+          <tr><td>↑ / ↓</td><td>上一首 / 下一首（选中，再按 → 开始）</td></tr>
+          <tr><td>B</td><td>黑屏开关</td></tr>
+          <tr><td>C</td><td>清屏开关</td></tr>
+          <tr><td>S / Tab</td><td>歌词 ⇄ 歌谱</td></tr>
+          <tr><td>O</td><td>观众屏 开 / 关</td></tr>
+          <tr><td>T</td><td>舞台屏 开 / 关</td></tr>
+          <tr><td>M</td><td>提示信息 显示 / 隐藏</td></tr>
+          <tr><td>Esc</td><td>收起歌词投屏面板</td></tr>
+        </table>
+        <div style="margin-top:6px">在输入框里打字时快捷键不会触发。背景可以直接从「背景」面板拖到幻灯片上：直接拖 = 这一页，Shift 拖 = 同一段，Alt 拖 = 整首歌。</div>
+      </details>
     </div>
     <div class="pr-side">
       <div class="pr-tabs" id="prTabs">
@@ -1032,6 +1091,7 @@ function ssFallback(img){ img.onerror=null; img.outerHTML=IDLE_SVG; }   // ss.pn
       <div class="pr-tabs dsk" id="prTabsL"><button type="button" data-p="list" class="on">歌单</button><button type="button" data-p="libs">库</button><button type="button" data-p="bible">圣经</button></div>
 <div class="pr-pane" data-pane="list">
         <div class="pr-set" id="prSet"></div>
+        <div class="hint" style="color:#8ea0bd;margin-top:6px;line-height:1.7">拖动整行排序（按住 Alt 拖 = 复制）· Ctrl/⌘ 点击多选，Shift 点击连选 · Ctrl+C/X/V 复制剪切粘贴 · Ctrl+D 创建副本 · Delete 删除 · Ctrl+Z 撤销 · Alt+↑↓ 移动 · 右键更多操作</div>
         <div class="pr-acts" style="margin-top:10px"><button type="button" class="pri" id="prAddLib">＋ 从诗歌库添加</button><button type="button" id="prAddMan">＋ 手动输入歌词</button><button type="button" id="prAddPpt">＋ 导入 PPT</button><button type="button" id="prAddPro">＋ 导入 ProPresenter</button><button type="button" id="prMakePpt">＋ 自己做 PPT</button><input type="file" id="prPptFile" accept=".pptx,application/vnd.openxmlformats-officedocument.presentationml.presentation" multiple hidden><input type="file" id="prProFile" accept=".proBundle,.probundle,.pro" multiple hidden></div>
         <div class="hint" id="prPptMsg" style="margin-top:6px;color:#8ea0bd"></div>
         <div class="hint" style="margin-top:8px;color:#8ea0bd">每首歌右边的输入框填演唱顺序，如 ABAB；段落标记 [A] [B] 在「✎ 分段」里编辑（诗歌库里已分好段的会直接带出）。</div>
@@ -1073,7 +1133,7 @@ function ssFallback(img){ img.onerror=null; img.outerHTML=IDLE_SVG; }   // ss.pn
         <div class="pr-bgcols">
           <div class="pr-bgcol">
             <div class="pr-sec" style="margin-top:0">应用范围</div>
-            <div class="pr-seg" id="prBgScope"><button type="button" data-s="all" class="on">全局背景</button><button type="button" data-s="song">仅当前歌曲</button><button type="button" data-s="clear">清除本曲背景</button></div>
+            <div class="pr-seg" id="prBgScope"><button type="button" data-s="all" class="on">全局背景</button><button type="button" data-s="slide">仅当前幻灯片</button><button type="button" data-s="song">仅当前歌曲</button><button type="button" data-s="clearslide">清除本页背景</button><button type="button" data-s="clear">清除本曲全部背景</button></div>
             <div class="hint" id="prBgScopeInfo" style="color:#8ea0bd;margin:4px 0 8px"></div>
             <div class="pr-sec">外观（背景＋文字样式一键套用）</div>
             <div class="pr-looks" id="prLooks"></div>
@@ -1107,6 +1167,14 @@ function ssFallback(img){ img.onerror=null; img.outerHTML=IDLE_SVG; }   // ss.pn
           <label>阴影描边</label><input type="checkbox" id="prShadow" style="width:auto" checked>
           <label>对齐</label><select id="prAlign"><option value="center">居中</option><option value="left">居左</option></select>
           <label>位置</label><select id="prPos"><option value="c">居中</option><option value="l">偏下（字幕条）</option><option value="t">偏上</option></select>
+          <label>自定义字体</label><input id="prCustom" placeholder="如 微软雅黑（留空用上面的）" autocomplete="off" spellcheck="false">
+          <label>描边粗细</label><input type="range" id="prSw" min="0" max="12" value="0">
+          <label>描边颜色</label><input type="color" id="prSc" value="#000000">
+          <label>阴影强度</label><input type="range" id="prShAmt" min="0" max="100" value="40">
+          <label>行距</label><input type="range" id="prLh" min="100" max="200" value="138">
+          <label>字间距</label><input type="range" id="prLs" min="0" max="30" value="0">
+          <label>斜体</label><input type="checkbox" id="prItal" style="width:auto">
+          <label>淡入时间</label><input type="range" id="prFade" min="0" max="1000" step="50" value="150">
         </div>
         <div class="hint" style="margin-top:10px;color:#8ea0bd">字号会自动缩小以放下整段文字，「字号上限」是文字最大不超过屏幕高度的百分比。</div>
       </div>
@@ -2829,6 +2897,7 @@ const bgdb = {
   async del(id){ try{ const d=await this.dir(); if (d) await d.removeEntry('bg_'+id); }catch{} return this.tx('readwrite', s=>s.delete(id)); }
 };
 const LV_FONTS = { sans:"system-ui,-apple-system,'PingFang SC','Microsoft YaHei',sans-serif", serif:"'Songti SC','STSong','SimSun','Noto Serif CJK SC',serif", kai:"'Kaiti SC','STKaiti','KaiTi','Noto Serif CJK SC',serif" };
+function lvFam(f){ f = f||{}; const base = LV_FONTS[f.family] || LV_FONTS.sans, c = String(f.custom||'').replace(/['"\\;{}<>]/g,'').trim(); return c ? "'"+c+"',"+base : base; }
 function lvFit(box, el, maxPx, minPx){
   let lo = minPx||10, hi = Math.max(lo, maxPx), best = lo;
   if (!el.textContent) return;
@@ -2856,8 +2925,8 @@ function makeLyricView(root, o){
   root.classList.add('lv'); root.classList.toggle('lv-stage', stage);
   root.innerHTML = stage
     ? '<div class="lv-hd"><div class="lv-ti"></div><div class="lv-clk"></div></div><div class="lv-cur"><div class="lv-in"></div><img class="lv-pi" hidden alt=""></div><div class="lv-nx"><div class="lv-nxl">下一页</div><div class="lv-nxt"></div><div class="lv-prow" hidden><img class="lv-pn" alt=""><div class="lv-nt"></div></div></div><div class="lv-flag"></div>'
-    : '<div class="lv-bg"></div><canvas class="lv-fx"></canvas><div class="lv-dim"></div><div class="lv-txt"><div class="lv-in"></div></div><div class="lv-ref"></div><div class="lv-ppt"><img alt=""></div><div class="lv-blk"></div>';
-  const q = c=>root.querySelector(c), inn = q('.lv-in'), refEl = q('.lv-ref');
+    : '<div class="lv-bg"></div><canvas class="lv-fx"></canvas><div class="lv-dim"></div><div class="lv-txt"><div class="lv-in"></div></div><div class="lv-ref"></div><div class="lv-msg"></div><div class="lv-ppt"><img alt=""></div><div class="lv-blk"></div>';
+  const q = c=>root.querySelector(c), inn = q('.lv-in'), refEl = q('.lv-ref'), msgEl = q('.lv-msg');
   let last = null, key = '', textKey = null, ft = 0, tok = 0, stopFx = null, objUrl = null, pk = '';
   function cleanup(){ if (stopFx) { stopFx(); stopFx = null; } if (objUrl) { URL.revokeObjectURL(objUrl); objUrl = null; } }
   function media(bgEl, src, kind){
@@ -2885,6 +2954,7 @@ function makeLyricView(root, o){
   }
   function refit(){
     if (!last) return;
+    if (msgEl) msgEl.style.fontSize = (root.clientHeight*.045)+'px';
     if (stage) return fitStage();
     if (last.ppt) return;
     lvFit(q('.lv-txt'), inn, (last.font && last.font.max || 12)/100*root.clientHeight, 10);
@@ -2896,16 +2966,21 @@ function makeLyricView(root, o){
     q('.lv-ppt').style.display = isP ? 'flex' : 'none'; q('.lv-ppt').classList.toggle('ov', ov);
     ['.lv-bg','.lv-fx','.lv-dim'].forEach(c=>{ q(c).style.visibility = (isP && !ov) ? 'hidden' : ''; }); q('.lv-txt').style.visibility = isP ? 'hidden' : '';
     q('.lv-txt').className = 'lv-txt p-'+(['l','t'].includes(f.pos)?f.pos:'c');
-    inn.style.fontFamily = LV_FONTS[f.family] || LV_FONTS.sans; inn.style.color = annColor(f.color||'#ffffff');
+    inn.style.fontFamily = lvFam(f); inn.style.color = annColor(f.color||'#ffffff');
     inn.style.fontWeight = f.bold ? '800' : '600'; inn.style.textAlign = f.align==='left' ? 'left' : 'center';
-    inn.style.textShadow = f.shadow===false ? 'none' : '0 2px 14px rgba(0,0,0,.85), 0 0 3px rgba(0,0,0,.9)';
+    const fadeMs = f.fade==null ? 140 : Math.max(0, +f.fade), shA = f.shAmt==null ? 40 : +f.shAmt, swv = +f.sw||0;
+    const strokeV = swv>0 ? `${(swv*2/100).toFixed(3)}em ${annColor(f.sc||'#000000')}` : '0';
+    inn.style.textShadow = f.shadow===false ? 'none' : `0 ${(shA/100*.06).toFixed(3)}em ${(shA/100*.35).toFixed(3)}em rgba(0,0,0,.85), 0 0 ${(shA/100*.08).toFixed(3)}em rgba(0,0,0,.9)`;
+    inn.style.setProperty('-webkit-text-stroke', strokeV); inn.style.setProperty('paint-order', 'stroke fill');
+    inn.style.lineHeight = String((+f.lh||138)/100); inn.style.letterSpacing = ((+f.ls||0)/100)+'em'; inn.style.fontStyle = f.ital ? 'italic' : 'normal'; inn.style.transition = 'opacity '+fadeMs+'ms';
+    if (msgEl) { msgEl.textContent = st.msg || ''; msgEl.style.display = st.msg ? 'flex' : 'none'; msgEl.style.fontSize = (root.clientHeight*.045)+'px'; msgEl.style.fontFamily = lvFam(f); }
     const bs = st.bset || {}, rp = bs.refPos || 'bottom', rf = (!isP && !st.clear && st.ref && rp!=='none') ? st.ref : '', ps = ['l','t'].includes(f.pos) ? f.pos : 'c';
     { const tx = q('.lv-txt'); tx.style.top = ''; tx.style.bottom = '';
       if (rf) { if (rp==='top') { if (ps!=='l') tx.style.top = '21%'; } else if (ps==='c') tx.style.bottom = '21%'; else if (ps==='l') tx.style.bottom = '17%'; } }
     if (refEl) {
       refEl.style.display = rf ? 'flex' : 'none'; refEl.style.height = ((bs.refSize||5)*1.7)+'%';
       if (rp==='top') { refEl.style.top = '5%'; refEl.style.bottom = 'auto'; } else { refEl.style.bottom = ps==='l' ? '4%' : '6%'; refEl.style.top = 'auto'; }
-      refEl.style.fontFamily = inn.style.fontFamily; refEl.style.color = inn.style.color; refEl.style.fontWeight = '600'; refEl.style.textShadow = inn.style.textShadow;
+      refEl.style.fontFamily = inn.style.fontFamily; refEl.style.color = inn.style.color; refEl.style.fontWeight = '600'; refEl.style.textShadow = inn.style.textShadow; refEl.style.setProperty('-webkit-text-stroke', strokeV); refEl.style.setProperty('paint-order', 'stroke fill'); refEl.style.letterSpacing = inn.style.letterSpacing; refEl.style.fontStyle = inn.style.fontStyle; refEl.style.transition = 'opacity '+fadeMs+'ms';
     }
     setBg(ov ? st.ppt.bg : st.bg, ov ? .12 : st.dim); q('.lv-blk').style.opacity = st.black ? 1 : 0;
     if (isP) {
@@ -2916,12 +2991,12 @@ function makeLyricView(root, o){
     const t = st.clear ? '' : (st.text||''), tkey = t+'\u0001'+rf;
     if (tkey !== textKey) {
       textKey = tkey; clearTimeout(ft); inn.style.opacity = 0; if (refEl) refEl.style.opacity = 0;
-      ft = setTimeout(()=>{ inn.textContent = t; if (refEl) refEl.textContent = rf; refit(); inn.style.opacity = 1; if (refEl) refEl.style.opacity = 1; }, t ? 140 : 0);
+      ft = setTimeout(()=>{ inn.textContent = t; if (refEl) refEl.textContent = rf; refit(); inn.style.opacity = 1; if (refEl) refEl.style.opacity = 1; }, t ? fadeMs : 0);
     } else refit();
   }
   let clk = 0;
   function applyStage(st){
-    const S = Object.assign({}, ST_DEF, st.stage || {}), isP = !!st.ppt, fam = LV_FONTS[(st.font||{}).family] || LV_FONTS.sans;
+    const S = Object.assign({}, ST_DEF, st.stage || {}), isP = !!st.ppt, fam = lvFam(st.font);
     root.style.background = annColor(S.bg);
     const cur = q('.lv-cur'), nx = q('.lv-nx'), nxt = q('.lv-nxt'), prow = q('.lv-prow'), pi = q('.lv-pi');
     cur.style.top = '10%'; cur.style.height = S.split+'%'; cur.style.bottom = 'auto'; cur.style.justifyContent = S.align==='left' ? 'flex-start' : 'center';
@@ -2974,10 +3049,10 @@ async function presShDelete(){
   pres.si = Math.max(0, pres.si-1); presSave(); presPush();
 }
 const PRES_DEF = { bg:{ type:'grad', id:'ocean', fx:true }, dim:.25, linesPer:2, font:{ family:'sans', max:12, color:'#ffffff', bold:true, shadow:true, align:'center', pos:'c' } };
-const pres = { mode:'lyric', bibleSet:{ per:1, nums:true, refPos:'bottom', refSize:5 }, si:0, _ks:-1, stageSet:Object.assign({}, ST_DEF), stageView:null, list:[], sel:0, slides:[], cur:-1, black:false, clear:false, out:false, stage:null, view:null, tab:'list', bg:PRES_DEF.bg, dim:PRES_DEF.dim, linesPer:PRES_DEF.linesPer, font:Object.assign({}, PRES_DEF.font) };
+const pres = { mode:'lyric', msel:new Set(), manc:0, clip:null, msg:{ text:'', on:false }, bibleSet:{ per:1, nums:true, refPos:'bottom', refSize:5 }, si:0, _ks:-1, stageSet:Object.assign({}, ST_DEF), stageView:null, list:[], sel:0, slides:[], cur:-1, black:false, clear:false, out:false, stage:null, view:null, tab:'list', bg:PRES_DEF.bg, dim:PRES_DEF.dim, linesPer:PRES_DEF.linesPer, font:Object.assign({}, PRES_DEF.font) };
 try {
   const s = JSON.parse(localStorage.getItem('hymnPresSet')||'null'); if (s) { if (s.bg) pres.bg = s.bg; if (typeof s.dim==='number') pres.dim = s.dim; if (s.linesPer!=null) pres.linesPer = +s.linesPer; if (s.font) Object.assign(pres.font, s.font); if (s.bible) Object.assign(pres.bibleSet, s.bible); if (s.stage) Object.assign(pres.stageSet, s.stage); }
-  const l = JSON.parse(localStorage.getItem('hymnSetlist')||'[]'); if (Array.isArray(l)) pres.list = l.filter(x=>x && x.title && (x.text || x.type==='ppt' || x.type==='bible'));
+  const l = JSON.parse(localStorage.getItem('hymnSetlist')||'[]'); if (Array.isArray(l)) pres.list = l.filter(x=>x && x.title && (x.text || x.type==='ppt' || x.type==='bible')); pres.list.forEach((x,k)=>{ if (!x.id) x.id = 's'+Date.now().toString(36)+k; });
 } catch {}
 function presSave(){ try{ localStorage.setItem('hymnPresSet', JSON.stringify({ bg:pres.bg, dim:pres.dim, linesPer:pres.linesPer, font:pres.font, stage:pres.stageSet, bible:pres.bibleSet })); localStorage.setItem('hymnSetlist', JSON.stringify(pres.list)); localStorage.setItem('hymnLibs', JSON.stringify(pres.libs)); localStorage.setItem('hymnLibSel', pres.libSel||''); }catch{} }
 pres.libs = []; pres.libSel = ''; pres.target = null;
@@ -2988,7 +3063,7 @@ function presMakeSlides(item){
     const vs = item.verses || [], bs = pres.bibleSet, per = bs.per>0 ? bs.per : (vs.length||1), out = [];
     for (let i=0; i<vs.length; i+=per) {
       const g = vs.slice(i, i+per), a = g[0].n, b = g[g.length-1].n, nums = bs.nums && g.length>1, rng = a+(b!==a ? '-'+b : '');
-      out.push({ label:rng, text:g.map(v=>(nums ? v.n+' ' : '')+v.t).join(nums ? '\n' : ''), ref:item.bookName+' '+item.ch+':'+rng });
+      out.push({ label:rng, text:g.map(v=>(nums ? v.n+' ' : '')+v.t).join(nums ? '\n' : ''), ref:item.bookName+' '+item.ch+':'+rng, key:'b'+rng });
     }
     return out;
   }
@@ -2998,7 +3073,7 @@ function presMakeSlides(item){
   seq.forEach((sec, si)=>{
     const lines = sec.text.split('\n').map(l=>l.trim()).filter(Boolean); if (!lines.length) return;
     const per = pres.linesPer>0 ? pres.linesPer : lines.length, n = Math.ceil(lines.length/per), size = Math.ceil(lines.length/n);
-    for (let i=0; i<lines.length; i+=size) out.push({ label:sec.label, text:lines.slice(i,i+size).join('\n'), sec:si });
+    for (let i=0; i<lines.length; i+=size) { const tx = lines.slice(i,i+size).join('\n'); out.push({ label:sec.label, text:tx, sec:si, key:sec.label+'\u0001'+tx }); }
   });
   return out;
 }
@@ -3006,7 +3081,7 @@ function presState(){
   const it = pres.list[pres.sel], s = pres.slides[pres.cur]; let next = '';
   if (s) { const n = pres.slides[pres.cur+1]; next = n ? n.text : (pres.list[pres.sel+1] ? '▶ 下一首：'+pres.list[pres.sel+1].title : '（歌单结束）'); }
   const st = { mode:'lyric', text:s?s.text:'', label:s?s.label:'', title:it?it.title:'', next, black:pres.black, clear:pres.clear,
-    bg:presEffBg(), dim:pres.dim, font:pres.font, stage:pres.stageSet, pos:s?`${pres.cur+1}/${pres.slides.length}`:'' };
+    bg:presEffBg(s), msg:(pres.msg.on && !pres.black) ? pres.msg.text : '', dim:pres.dim, font:pres.font, stage:pres.stageSet, pos:s?`${pres.cur+1}/${pres.slides.length}`:'' };
   if (s && s.ref) { st.ref = s.ref; st.bset = pres.bibleSet; }
   if (s && s.ppt) { const n = pres.slides[pres.cur+1]; st.ppt = { deck:s.ppt.deck, idx:s.ppt.idx, next:n && n.ppt ? n.ppt.idx : -1, notes:(it.notes||[])[s.ppt.idx]||'', bg:(it.bgs||[])[s.ppt.idx]||null }; st.text = ''; }
   return st;
@@ -3048,7 +3123,7 @@ function presPush(){
   $('prBlack').classList.toggle('on', pres.black); $('prClear').classList.toggle('on', pres.clear);
   $('prStart').hidden = pres.out && castActive(); $('prEnd').hidden = !(pres.out && castActive());
   { const live = pres.out && castActive(); $('prPvWrap').classList.toggle('live', live); $('prBadge').textContent = live ? (pres.black ? 'LIVE · 黑屏' : pres.clear ? 'LIVE · 清屏' : 'LIVE') : '预览';
-    $('prChip').classList.toggle('live', live); $('prChip').textContent = live ? '正在输出到观众屏' + (pres.stage && !pres.stage.closed ? ' · 舞台屏已打开' : '') : '未输出（点「开始输出」，或在「输出屏幕」里选屏幕）'; }
+    $('prChip').classList.toggle('live', live); $('prStage').classList.toggle('on', presStageOpen()); $('prChip').textContent = live ? '正在输出到观众屏' + (pres.stage && !pres.stage.closed ? ' · 舞台屏已打开' : '') : '未输出（点「开始输出」，或在「输出屏幕」里选屏幕）'; }
 }
 function presAfterStop(){ pres.out = false; if (pres.stage && !pres.stage.closed) { try{ pres.stage.postMessage({ t:'close' }, '*'); pres.stage.close(); }catch{} } pres.stage = null; if (!$('pres').hidden) presPush(); }
 function presGo(i, keepSel){
@@ -3061,8 +3136,8 @@ function presRegen(){ pres.slides = presMakeSlides(pres.list[pres.sel]); }
 function presHue(label, item){ const { secs } = arrParse(item.text); const i = secs.findIndex(x=>x.label===label); return 'hsl('+((i<0?0:i)*57+210)%360+',55%,38%)'; }
 function presRender(){
   const it = pres.list[pres.sel];
-  $('prSet').innerHTML = pres.list.length ? pres.list.map((x,i)=>`<div class="pr-item${i===pres.sel?' on':''}" data-i="${i}">
-      <span class="tt" data-act="sel">${i+1}. ${annEsc(x.title)}</span>
+  $('prSet').innerHTML = pres.list.length ? pres.list.map((x,i)=>`<div class="pr-item${i===pres.sel?' on':''}${pres.msel.has(x.id)?' msel':''}" data-i="${i}">
+      <span class="pr-grip" draggable="true" title="拖动排序">⠿</span><span class="tt" data-act="sel" draggable="true" title="拖动可调整顺序，双击重命名">${i+1}. ${annEsc(x.title)}</span>
       ${x.type==='ppt' ? `<span class="hint" style="color:#8ea0bd">PPT · ${x.count} 页</span>` : x.type==='bible' ? `<span class="hint" style="color:#8ea0bd">圣经 · ${(x.verses||[]).length} 节</span>` : `<input data-act="ord" value="${annEsc(x.order||'')}" placeholder="ABAB" autocapitalize="characters" autocomplete="off" spellcheck="false">`}
       <button type="button" data-act="up">↑</button>${x.type==='ppt' || x.type==='bible' ? '' : '<button type="button" data-act="edit">✎ 分段</button>'}<button type="button" data-act="tolib">存库</button><button type="button" data-act="del" class="danger">✕</button></div>`).join('')
     : '<div class="hint" style="color:#8ea0bd">歌单还是空的。</div>';
@@ -3073,7 +3148,7 @@ function presMkItem(it){
   return Object.assign({ id:String(Date.now())+Math.random().toString(36).slice(2,5), title:it.title||'未命名', text:it.text||'', order:it.order||'' },
     it.type==='ppt' ? { type:'ppt', deckId:it.deckId, count:it.count, texts:it.texts, notes:it.notes, bgs:it.bgs } : {},
     it.type==='bible' ? { type:'bible', bookName:it.bookName, ch:it.ch, verses:it.verses } : {},
-    it.sheets && it.sheets.length ? { sheets:it.sheets } : {});
+    it.sheets && it.sheets.length ? { sheets:it.sheets } : {}, it.bg ? { bg:it.bg } : {}, it.sbg ? { sbg:it.sbg } : {});
 }
 function presAddItem(it){
   if (pres.target) { libEnsure(); const lib = pres.libs.find(l=>l.id===pres.target) || libCur(); lib.items.push(presMkItem(it)); presSave(); libRender(); return; }
@@ -3109,16 +3184,25 @@ window.addEventListener('resize', ()=>{ if (!$('pres').hidden) presTab(pres.tab|
 function presSyncForm(){
   $('prLines').value = String(pres.linesPer); $('prFam').value = pres.font.family; $('prSize').value = pres.font.max; $('prColor').value = pres.font.color;
   $('prBold').checked = !!pres.font.bold; $('prShadow').checked = pres.font.shadow!==false; $('prAlign').value = pres.font.align; $('prPos').value = pres.font.pos; $('prDim').value = Math.round(pres.dim*100);
+  { const f = pres.font; $('prCustom').value = f.custom||''; $('prSw').value = f.sw||0; $('prSc').value = f.sc||'#000000'; $('prShAmt').value = f.shAmt==null ? 40 : f.shAmt; $('prLh').value = f.lh||138; $('prLs').value = f.ls||0; $('prItal').checked = !!f.ital; $('prFade').value = f.fade==null ? 150 : f.fade; }
 }
 function presKey(e){
   const k = e.key;
   const sm = pres.mode==='sheet';
+  if (e.ctrlKey || e.metaKey || e.altKey) return false;
   if (k==='s'||k==='S'||k==='Tab') { e.preventDefault(); presToggleSheet(); }
   else if (k==='ArrowRight'||k==='PageDown'||k===' '||k==='Enter') { e.preventDefault(); sm ? presSheetGo(1) : presGo(pres.cur+1); }
   else if (k==='ArrowLeft'||k==='PageUp'||k==='Backspace') { e.preventDefault(); sm ? presSheetGo(-1) : presGo(pres.cur-1); }
   else if (k==='b'||k==='B') { pres.black = !pres.black; presPush(); }
   else if (k==='c'||k==='C') { pres.clear = !pres.clear; presPush(); }
   else if (k==='Escape') { $('pres').hidden = true; document.body.style.overflow=''; }
+  else if (k==='o'||k==='O') { presToggleAudience(); }
+  else if (k==='t'||k==='T') { presToggleStage(); }
+  else if (k==='m'||k==='M') { presToggleMsg(); }
+  else if (k==='ArrowUp'||k==='ArrowDown') { e.preventDefault(); presSong(k==='ArrowDown' ? 1 : -1); }
+  else if (k==='Home') { e.preventDefault(); if (sm) { pres.si = 0; presPush(); } else if (pres.slides.length) presGo(0); }
+  else if (k==='End') { e.preventDefault(); if (sm) { const it = pres.list[pres.sel]; pres.si = Math.max(0, (it && it.sheets ? it.sheets.length : 1)-1); presPush(); } else if (pres.slides.length) presGo(pres.slides.length-1); }
+  else if (/^[1-9]$/.test(k) && !sm) { if (+k-1 < pres.slides.length) presGo(+k-1); }
   else return false;
   return true;
 }
@@ -3129,34 +3213,37 @@ const PRES_PRE = [
 ];
 function presBgRender(){
   presScopeUI();
-  const same = b=>JSON.stringify(b)===JSON.stringify(presEffBg());
-  $('prBgPre').innerHTML = PRES_PRE.map((p,i)=>`<button type="button" class="pr-bgb lv-bg ${p.c||''}${same(p.bg)?' on':''}" data-i="${i}" style="${p.css?'background:'+p.css:''}"><span>${p.n}</span></button>`).join('')
+  const same = b=>JSON.stringify(b)===JSON.stringify(presEffBg(pres.slides[pres.cur]));
+  $('prBgPre').innerHTML = PRES_PRE.map((p,i)=>`<button type="button" class="pr-bgb lv-bg ${p.c||''}${same(p.bg)?' on':''}" data-i="${i}" draggable="true" style="${p.css?'background:'+p.css:''}"><span>${p.n}</span></button>`).join('')
     + `<button type="button" class="pr-bgb${presEffBg().type==='color'?' on':''}" id="prColorBtn" style="background:${presEffBg().type==='color'?annColor(presEffBg().color):'#1e3a8a'}"><span>纯色…</span><input type="color" id="prBgColor" value="${presEffBg().type==='color'?annColor(presEffBg().color):'#1e3a8a'}" style="position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer"></button>`;
   bgdb.all().then(list=>{
     list = list.filter(r=>r.kind!=='deck'); list.sort((a,b)=>b.at-a.at);
-    $('prBgList').innerHTML = list.length ? list.map(r=>`<div class="pr-bgb${presEffBg().type==='local'&&presEffBg().id===r.id?' on':''}" data-id="${r.id}"><span>${annEsc(r.name)}</span><button type="button" class="x" data-del="${r.id}">×</button></div>`).join('') : '<div class="hint" style="color:#8ea0bd;grid-column:1/-1">还没有本地背景。</div>';
+    $('prBgList').innerHTML = list.length ? list.map(r=>`<div class="pr-bgb${presEffBg().type==='local'&&presEffBg().id===r.id?' on':''}" data-id="${r.id}" draggable="true"><span>${annEsc(r.name)}</span><button type="button" class="x" data-del="${r.id}">×</button></div>`).join('') : '<div class="hint" style="color:#8ea0bd;grid-column:1/-1">还没有本地背景。</div>';
     list.forEach(r=>{ const el = $('prBgList').querySelector(`[data-id="${r.id}"]`); if (!el) return; const u = URL.createObjectURL(r.blob);
-      const m = document.createElement(r.kind==='video'?'video':'img'); if (r.kind==='video') { m.muted = true; m.preload = 'metadata'; m.src = u+'#t=0.5'; } else m.src = u; el.prepend(m); });
+      const m = document.createElement(r.kind==='video'?'video':'img'); if (r.kind==='video') { m.muted = true; m.preload = 'metadata'; m.src = u+'#t=0.5'; } else m.src = u; m.draggable = false; el.prepend(m); });
   }).catch(()=>{ $('prBgList').innerHTML = '<div class="hint" style="color:#8ea0bd;grid-column:1/-1">浏览器不支持保存本地文件。</div>'; });
 }
 pres.bgScope = 'all';
-function presAssignBg(bg){ const it = pres.list[pres.sel]; if (pres.bgScope==='song' && it) it.bg = bg; else pres.bg = bg; }
+function presAssignBg(bg){ const it = pres.list[pres.sel], s = pres.slides[pres.cur]; if (pres.bgScope==='slide' && it && s && s.key) { (it.sbg = it.sbg || {})[s.key] = bg; } else if (pres.bgScope==='song' && it) it.bg = bg; else if (pres.bgScope==='all') pres.bg = bg; else if (pres.bgScope==='slide') { $('prInfo').textContent = '先在幻灯片里点选一页，再给它选背景。'; } }
 function presSetBg(bg){ presAssignBg(bg); presSave(); presBgRender(); presRenderSlides(); presPush(); }
 function presScopeUI(){
   const it = pres.list[pres.sel];
   document.querySelectorAll('#prBgScope button[data-s]').forEach(b=>b.classList.toggle('on', b.dataset.s===pres.bgScope));
-  $('prBgScopeInfo').textContent = pres.bgScope==='song' ? (it ? '现在选的背景只作用于「'+it.title+'」。' : '歌单里还没有歌曲。') : '现在选的背景作用于所有没有单独设置背景的歌曲。' + (it && it.bg ? '（当前歌曲有独立背景。）' : '');
+  $('prBgScopeInfo').textContent = pres.bgScope==='slide' ? '现在选的背景只作用于当前选中的这一页。也可以直接把背景拖到幻灯片上：直接拖 = 这一页，Shift 拖 = 同一段，Alt 拖 = 整首歌。' : pres.bgScope==='song' ? (it ? '现在选的背景只作用于「'+it.title+'」。' : '歌单里还没有歌曲。') : '现在选的背景作用于所有没有单独设置背景的歌曲。' + (it && it.bg ? '（当前歌曲有独立背景。）' : '');
 }
 $('prBgScope').addEventListener('click', e=>{
   const b = e.target.closest('button[data-s]'); if (!b) return; const it = pres.list[pres.sel];
-  if (b.dataset.s==='clear') { if (it) { delete it.bg; presSave(); presBgRender(); presRenderSlides(); presPush(); } return; }
+  if (b.dataset.s==='clearslide') { const s = pres.slides[pres.cur]; if (it && s && it.sbg && s.key && it.sbg[s.key]) { delete it.sbg[s.key]; presSave(); presBgRender(); presRenderSlides(); presPush(); } return; }
+  if (b.dataset.s==='clear') { if (it) { delete it.bg; delete it.sbg; presSave(); presBgRender(); presRenderSlides(); presPush(); } return; }
   pres.bgScope = b.dataset.s; presScopeUI();
 });
 const PRES_LOOKS = [
   { n:'深海经典', bg:{ type:'grad', id:'ocean', fx:true }, dim:.25, linesPer:2, font:{ family:'sans', max:12, color:'#ffffff', bold:true, shadow:true, align:'center', pos:'c' } },
   { n:'黑底大字', bg:{ type:'none' }, dim:0, linesPer:1, font:{ family:'sans', max:16, color:'#ffffff', bold:true, shadow:false, align:'center', pos:'c' } },
   { n:'金辉楷体', bg:{ type:'grad', id:'gold', fx:true }, dim:.2, linesPer:2, font:{ family:'kai', max:12, color:'#fde68a', bold:true, shadow:true, align:'center', pos:'c' } },
-  { n:'下方字幕条', bg:{ type:'none' }, dim:0, linesPer:2, font:{ family:'sans', max:8, color:'#ffffff', bold:true, shadow:true, align:'center', pos:'l' } }
+  { n:'下方字幕条', bg:{ type:'none' }, dim:0, linesPer:2, font:{ family:'sans', max:8, color:'#ffffff', bold:true, shadow:true, align:'center', pos:'l' } },
+  { n:'白字黑边', bg:{ type:'none' }, dim:0, linesPer:2, font:{ family:'sans', max:12, color:'#ffffff', bold:true, shadow:false, align:'center', pos:'c', sw:5, sc:'#000000' } },
+  { n:'黄字黑边', bg:{ type:'none' }, dim:0, linesPer:2, font:{ family:'sans', max:12, color:'#fde047', bold:true, shadow:true, align:'center', pos:'c', sw:5, sc:'#000000', shAmt:30 } }
 ];
 pres.looks = []; try { const l = JSON.parse(localStorage.getItem('hymnLooks')||'[]'); if (Array.isArray(l)) pres.looks = l; } catch {}
 function looksRender(){
@@ -3174,7 +3261,7 @@ $('prLooks').addEventListener('click', e=>{
   const b = e.target.closest('button[data-k]'); if (!b) return;
   const l = PRES_LOOKS.concat(pres.looks)[+b.dataset.k]; if (!l) return;
   pres.bg = JSON.parse(JSON.stringify(l.bg)); pres.dim = l.dim; pres.linesPer = l.linesPer; pres.font = Object.assign({}, l.font);
-  const it = pres.list[pres.sel]; if (it) delete it.bg;
+  const it = pres.list[pres.sel]; if (it) { delete it.bg; delete it.sbg; }
   presSave(); presSyncForm(); const was = pres.cur; presRegen(); pres.cur = Math.min(was, pres.slides.length-1); presBgRender(); presRender(); presPush();
 });
 looksRender();
@@ -3201,18 +3288,18 @@ $('prBgFile').addEventListener('change', async ()=>{
 $('prBgUrlOk').addEventListener('click', ()=>{ const u=$('prBgUrl').value.trim(); if (!/^https?:\/\//i.test(u)) { alert('请输入 http(s) 开头的图片或视频链接。'); return; } presSetBg({ type:'url', url:u }); });
 /* ---- 样式 ---- */
 const presStyleBind = ()=>{
-  pres.linesPer = +$('prLines').value; pres.font = { family:$('prFam').value, max:+$('prSize').value, color:$('prColor').value, bold:$('prBold').checked, shadow:$('prShadow').checked, align:$('prAlign').value, pos:$('prPos').value };
+  pres.linesPer = +$('prLines').value; pres.font = { family:$('prFam').value, max:+$('prSize').value, color:$('prColor').value, bold:$('prBold').checked, shadow:$('prShadow').checked, align:$('prAlign').value, pos:$('prPos').value,
+    custom:$('prCustom').value.trim(), sw:+$('prSw').value, sc:$('prSc').value, shAmt:+$('prShAmt').value, lh:+$('prLh').value, ls:+$('prLs').value, ital:$('prItal').checked, fade:+$('prFade').value };
   pres.dim = +$('prDim').value/100; presSave();
 };
-['prFam','prSize','prColor','prBold','prShadow','prAlign','prPos','prDim'].forEach(id=>$(id).addEventListener('input', ()=>{ presStyleBind(); presPush(); }));
+['prFam','prSize','prColor','prBold','prShadow','prAlign','prPos','prDim','prCustom','prSw','prSc','prShAmt','prLh','prLs','prItal','prFade'].forEach(id=>$(id).addEventListener('input', ()=>{ presStyleBind(); presPush(); }));
 $('prLines').addEventListener('change', ()=>{ presStyleBind(); const was = pres.cur; presRegen(); pres.cur = Math.min(was, pres.slides.length-1); presRender(); presPush(); });
 /* ---- 歌单 ---- */
 $('prSet').addEventListener('click', e=>{
   const row = e.target.closest('.pr-item'); if (!row) return; const i = +row.dataset.i, act = e.target.dataset.act, it = pres.list[i];
   if (act==='sel') { pres.sel = i; pres.cur = -1; presRegen(); presRender(); presPush(); presTab('slides'); }
-  else if (act==='up' && i>0) { [pres.list[i-1], pres.list[i]] = [pres.list[i], pres.list[i-1]]; if (pres.sel===i) pres.sel = i-1; else if (pres.sel===i-1) pres.sel = i; presSave(); presRender(); }
-  else if (act==='del') { if (!confirm('从歌单移除「'+it.title+'」？')) return; if (it.type==='ppt' && !deckInUse(it.deckId, it)) { bgdb.del(it.deckId).catch(()=>{}); pptCache.delete(it.deckId); }
-    pres.list.splice(i,1); pres.sel = Math.max(0, Math.min(pres.sel, pres.list.length-1)); pres.cur = -1; presRegen(); presSave(); presRender(); presPush(); }
+  else if (act==='up' && i>0) { pres.msel = new Set([it.id]); pres.manc = i; prMoveSel(-1); }
+  else if (act==='del') { prDelete([it]); }
   else if (act==='tolib') libSaveItem(it);
   else if (act==='edit') arrOpen(null, { custom:true, title:it.title, text:it.text, order:it.order, applyLabel:'应用到歌单', onApply:(text,order)=>{ it.text = text; it.order = order; if (pres.sel===i) { pres.cur = -1; presRegen(); } presSave(); presRender(); presPush(); } });
 });
@@ -3222,18 +3309,19 @@ $('prSet').addEventListener('input', e=>{
 });
 function presRenderSlidesOnly(){ presRenderSlides(); }
 const PR_THUMB = { ocean:'linear-gradient(125deg,#07163a,#0f3a7d,#0a6d92)', dusk:'linear-gradient(125deg,#1b0f3b,#4a1d6b,#8a2f6a)', dawn:'linear-gradient(125deg,#16324f,#2f6f8f,#e0a96d)', gold:'linear-gradient(125deg,#0d0b08,#3a2a0c,#7a5a1a)' };
-function presEffBg(){ const it = pres.list[pres.sel]; return it && it.bg ? it.bg : pres.bg; }
-function presThumbStyle(){
-  const b = presEffBg() || {};
+function presEffBg(s){ const it = pres.list[pres.sel]; if (it && s && s.key && it.sbg && it.sbg[s.key]) return it.sbg[s.key]; return it && it.bg ? it.bg : pres.bg; }
+function presThumbStyle(s){
+  const b = presEffBg(s) || {};
   if (b.type==='grad') return 'background-image:'+(PR_THUMB[b.id]||'none');
   if (b.type==='color') return 'background-color:'+annColor(b.color);
+  if (b.type==='url' && b.kind!=='video' && /^https?:|^data:/i.test(b.url||'') && !/\.(mp4|webm|mov|m4v|ogv)(\?|#|$)/i.test(b.url)) return 'background-image:url("'+String(b.url).replace(/"/g,'%22')+'")';
   return '';
 }
 function presCard(s, i, it){
   const on = i===pres.cur ? ' on' : '';
   if (s.ppt) return `<div class="pr-card${on}" data-i="${i}" data-n="${i+1}"><img data-d="${annEsc(s.ppt.deck)}" data-x="${s.ppt.idx}" alt=""><b style="background:#475569">${annEsc(s.label)}</b></div>`;
   const col = annColor(pres.font.color||'#ffffff');
-  return `<div class="pr-card${on}" data-i="${i}" data-n="${i+1}" style="${presThumbStyle()};color:${col}"><b style="background:${presHue(s.label,it)}">${annEsc(s.label)}</b><span class="pt">${annEsc(s.text)}</span></div>`;
+  return `<div class="pr-card${on}" data-i="${i}" data-n="${i+1}" style="${presThumbStyle(s)};color:${col}"><b style="background:${presHue(s.label,it)}">${annEsc(s.label)}</b><span class="pt">${annEsc(s.text)}</span>${it.sbg && s.key && it.sbg[s.key] ? '<em class="pr-bgm">背景</em>' : ''}</div>`;
 }
 function presRenderSlides(){
   const it = pres.list[pres.sel];
@@ -3511,6 +3599,295 @@ function bibleSetChanged(regen){
 ['bbRefPos','bbRefSize'].forEach(id=>$(id).addEventListener('input', ()=>bibleSetChanged(false)));
 bibleSyncForm();
 
+/* ============== ProPresenter 式功能：拖背景到幻灯片 / 键盘开关输出 / 提示信息条 / 歌单拖动排序 ============== */
+
+/* ---- 把背景拖到幻灯片上 ---- */
+const BG_MIME = 'application/x-hymn-bg';
+function prBgDragStart(e, bg){ e.dataTransfer.setData(BG_MIME, JSON.stringify(bg)); e.dataTransfer.effectAllowed = 'copy'; }
+$('prBgPre').addEventListener('dragstart', e=>{ const b = e.target.closest('button[data-i]'); if (b) prBgDragStart(e, PRES_PRE[+b.dataset.i].bg); });
+$('prBgList').addEventListener('dragstart', e=>{ const c = e.target.closest('[data-id]'); if (c) prBgDragStart(e, { type:'local', id:c.dataset.id }); });
+async function prDropFiles(files){
+  const f = [...files].find(x=>/^(image|video)\//.test(x.type)); if (!f) return null;
+  if (f.size > 600*1048576) { alert(f.name+' 太大（超过 600MB），请压缩后再用。'); return null; }
+  const kind = f.type.startsWith('video') ? 'video' : 'image', id = 'bg'+Date.now()+Math.random().toString(36).slice(2,5);
+  await bgdb.put({ id, name:f.name, kind, blob:f, at:Date.now() });
+  return { type:'local', id };
+}
+const prSl = $('prSlides');
+prSl.addEventListener('dragover', e=>{
+  const c = e.target.closest('.pr-card'); if (!c) return;
+  const t = [...(e.dataTransfer.types||[])];
+  if (t.includes(BG_MIME) || t.includes('Files')) {
+    e.preventDefault(); e.dataTransfer.dropEffect = 'copy';
+    prSl.querySelectorAll('.pr-card.drop').forEach(x=>{ if (x!==c) x.classList.remove('drop'); }); c.classList.add('drop');
+  }
+});
+prSl.addEventListener('dragleave', e=>{ const c = e.target.closest('.pr-card'); if (c && !c.contains(e.relatedTarget)) c.classList.remove('drop'); });
+prSl.addEventListener('drop', async e=>{
+  const c = e.target.closest('.pr-card'); if (!c) return;
+  e.preventDefault(); prSl.querySelectorAll('.pr-card.drop').forEach(x=>x.classList.remove('drop'));
+  const it = pres.list[pres.sel], s = pres.slides[+c.dataset.i]; if (!it || !s) return;
+  if (!s.key) { $('prInfo').textContent = 'PPT 幻灯片的背景请在做 PPT 时设置。'; return; }
+  let bg = null; const raw = e.dataTransfer.getData(BG_MIME);
+  if (raw) { try{ bg = JSON.parse(raw); }catch{} }
+  else if (e.dataTransfer.files && e.dataTransfer.files.length) { try{ bg = await prDropFiles(e.dataTransfer.files); }catch{ alert('保存背景失败（浏览器存储空间不足？）'); } }
+  if (!bg) return;
+  let msg = '已设为这一页的背景。';
+  if (e.altKey) { delete it.sbg; it.bg = bg; msg = '已设为整首歌的背景。'; }
+  else {
+    const keys = e.shiftKey ? [...new Set(pres.slides.filter(x=>x.label===s.label && x.key).map(x=>x.key))] : [s.key];
+    it.sbg = it.sbg || {}; keys.forEach(k=>{ it.sbg[k] = bg; }); if (e.shiftKey) msg = '已设为同一段（'+s.label+'）所有页的背景。';
+  }
+  presSave(); presBgRender(); presRenderSlides(); presPush(); $('prInfo').textContent = msg;
+});
+
+/* ---- 歌单：多选 / 拖动排序 / 复制粘贴 / 创建副本 / 删除 / 撤销重做 / 右键菜单 ---- */
+const prSetEl = $('prSet');
+prSetEl.tabIndex = 0;
+const PR_MAC = /Mac|iPhone|iPad/.test(navigator.platform || '');
+const PR_MOD = PR_MAC ? '⌘' : 'Ctrl+';
+const prUndo = [], prRedo = [];
+let prDragIds = null, prDropPos = -1, prToastT = 0;
+
+/* 提示条（带「撤销」按钮） */
+const prToastEl = document.createElement('div'); prToastEl.id = 'prToast'; prToastEl.hidden = true;
+prToastEl.innerHTML = '<span id="prToastMsg"></span><button type="button" id="prToastUndo">撤销</button>';
+document.body.appendChild(prToastEl);
+function prToast(msg, undo){
+  $('prToastMsg').textContent = msg; $('prToastUndo').hidden = !undo; prToastEl.hidden = false;
+  clearTimeout(prToastT); prToastT = setTimeout(()=>{ prToastEl.hidden = true; }, undo ? 7000 : 2200);
+}
+$('prToastUndo').addEventListener('click', ()=>{ prUndoDo(); prSetEl.focus(); });
+
+/* 撤销栈：每次改动前存一份歌单快照 */
+const prSnap = ()=>JSON.stringify({ list:pres.list, sel:(pres.list[pres.sel]||{}).id||'', cur:pres.cur });
+function prGc(snap){   // 快照被挤出撤销栈后，清理不再被任何地方用到的 PPT 数据
+  let o; try{ o = JSON.parse(snap); }catch{ return; }
+  const ctx = JSON.stringify(pres.list)+JSON.stringify(pres.libs)+prUndo.join('')+prRedo.join('');
+  new Set((o.list||[]).filter(x=>x.type==='ppt' && x.deckId).map(x=>x.deckId)).forEach(d=>{ if (!ctx.includes(d)) { bgdb.del(d).catch(()=>{}); pptCache.delete(d); } });
+}
+function prPushUndo(){
+  prUndo.push(prSnap()); if (prUndo.length > 30) prGc(prUndo.shift());
+  if (prRedo.length) { const g = prRedo.splice(0); g.forEach(prGc); }
+}
+function prRestore(s){
+  const o = JSON.parse(s), was = (pres.list[pres.sel]||{}).id, wasCur = pres.cur;
+  pres.list = o.list; const n = o.list.findIndex(x=>x.id===o.sel); pres.sel = n < 0 ? 0 : n;
+  pres.msel = new Set(); pres.manc = pres.sel; presRegen();
+  pres.cur = (n >= 0 && o.sel===was) ? Math.min(wasCur, pres.slides.length-1) : -1;
+  presSave(); presRender(); presPush();
+}
+function prUndoDo(){ if (!prUndo.length) { prToast('没有可撤销的操作'); return; } prRedo.push(prSnap()); prRestore(prUndo.pop()); prToast('已撤销（Shift+'+PR_MOD+'Z 重做）'); }
+function prRedoDo(){ if (!prRedo.length) { prToast('没有可重做的操作'); return; } prUndo.push(prSnap()); prRestore(prRedo.pop()); prToast('已重做'); }
+
+/* 统一的改动入口：先存撤销点，再改，再恢复「当前歌曲」指针并刷新 */
+function prDo(fn, fb){
+  prPushUndo();
+  const cur = pres.list[pres.sel]; fn();
+  let n = cur ? pres.list.indexOf(cur) : -1; const gone = n < 0;
+  if (gone) n = Math.max(0, Math.min(fb==null ? pres.sel : fb, pres.list.length-1));
+  pres.sel = n; if (gone) pres.cur = -1;
+  presRegen(); if (!gone) pres.cur = Math.min(pres.cur, pres.slides.length-1);
+  presSave(); presRender(); presPush();
+}
+
+/* 选择 */
+const prSelItems = ()=>pres.list.filter(x=>pres.msel.has(x.id));
+function prPaintSel(){ prSetEl.querySelectorAll('.pr-item').forEach(r=>{ const it = pres.list[+r.dataset.i]; r.classList.toggle('msel', !!it && pres.msel.has(it.id)); }); }
+function prSelAll(){ pres.msel = new Set(pres.list.map(x=>x.id)); prPaintSel(); }
+prSetEl.addEventListener('click', e=>{   // 捕获阶段：Shift 连选、Ctrl/⌘ 点选，点行空白处 = 选中并打开
+  const row = e.target.closest('.pr-item');
+  if (!row) { if (e.target===prSetEl) { pres.msel = new Set(); prPaintSel(); } return; }
+  if (e.target.closest('button,input')) return;
+  const i = +row.dataset.i, it = pres.list[i]; if (!it) return;
+  if (e.shiftKey) { e.stopImmediatePropagation(); const a = Math.min(pres.manc||0, i), b = Math.max(pres.manc||0, i); pres.msel = new Set(pres.list.slice(a, b+1).map(x=>x.id)); prPaintSel(); return; }
+  if (e.ctrlKey || e.metaKey) { e.stopImmediatePropagation(); if (pres.msel.has(it.id)) pres.msel.delete(it.id); else pres.msel.add(it.id); pres.manc = i; prPaintSel(); return; }
+  pres.msel = new Set([it.id]); pres.manc = i;
+  if (!e.target.closest('.tt')) { e.stopImmediatePropagation(); pres.sel = i; pres.cur = -1; presRegen(); presRender(); presPush(); presTab('slides'); }
+}, true);
+
+/* 复制 / 剪切 / 粘贴 / 副本 / 删除 / 重命名 / 移动 */
+const PR_CLIP = 'hymnClip';
+function prClipGet(){ if (pres.clip && pres.clip.length) return pres.clip; try{ const a = JSON.parse(localStorage.getItem(PR_CLIP)||'[]'); return Array.isArray(a) ? a : []; }catch{ return []; } }
+function prCopy(cut){
+  const items = prSelItems(); if (!items.length) { prToast('先选中要复制的歌曲'); return; }
+  pres.clip = JSON.parse(JSON.stringify(items)); try{ localStorage.setItem(PR_CLIP, JSON.stringify(pres.clip)); }catch{}
+  if (cut) prDelete(items, '已剪切 '+items.length+' 项，按 '+PR_MOD+'V 粘贴'); else prToast('已复制 '+items.length+' 项，按 '+PR_MOD+'V 粘贴');
+}
+async function prCloneItems(items){
+  const out = [];
+  for (const it of items) { const c = JSON.parse(JSON.stringify(it)); c.sheets = await cloneSheets(it.sheets); out.push(presMkItem(c)); }
+  return out;
+}
+async function prInsert(items, pos, msg){
+  const cl = await prCloneItems(items);
+  prDo(()=>{ pres.list.splice(Math.max(0, Math.min(pos, pres.list.length)), 0, ...cl); pres.msel = new Set(cl.map(x=>x.id)); });
+  pres.manc = Math.max(0, pres.list.indexOf(cl[0])); presRender(); prToast(msg || ('已添加 '+cl.length+' 项'), true);
+  const row = prSetEl.querySelector('.pr-item.msel'); if (row) row.scrollIntoView({ block:'nearest' });
+}
+function prPaste(){
+  const clip = prClipGet(); if (!clip.length) { prToast('剪贴板是空的：先选中歌曲，按 '+PR_MOD+'C 复制'); return; }
+  const last = Math.max(-1, ...prSelItems().map(x=>pres.list.indexOf(x)));
+  prInsert(clip, last < 0 ? pres.list.length : last+1, '已粘贴 '+clip.length+' 项');
+}
+function prDup(){
+  const items = prSelItems(); if (!items.length) { prToast('先选中要创建副本的歌曲'); return; }
+  prInsert(items, pres.list.indexOf(items[items.length-1])+1, '已创建 '+items.length+' 个副本');
+}
+function prDelete(items, msg){
+  if (!items.length) return;
+  const ids = new Set(items.map(x=>x.id)), first = pres.list.findIndex(x=>ids.has(x.id));
+  prDo(()=>{ pres.list = pres.list.filter(x=>!ids.has(x.id)); const nx = pres.list[Math.min(first, pres.list.length-1)]; pres.msel = new Set(nx ? [nx.id] : []); pres.manc = Math.max(0, pres.list.indexOf(nx)); }, first);
+  prToast(msg || (items.length===1 ? '已删除「'+items[0].title+'」' : '已删除 '+items.length+' 项'), true);
+}
+function prDelSel(){ const items = prSelItems(); if (!items.length) { prToast('先选中要删除的歌曲'); return; } prDelete(items); }
+function prRename(){
+  const items = prSelItems(); if (items.length!==1) { prToast('重命名一次只能选一首'); return; }
+  const it = items[0], n = (prompt('歌曲名称：', it.title) || '').trim(); if (!n || n===it.title) return;
+  prDo(()=>{ it.title = n; });
+}
+function prMoveSel(d){
+  const S = pres.msel; if (!S.size) return; const arr = pres.list.slice(); let ch = false;
+  if (d < 0) { for (let i=1; i<arr.length; i++) if (S.has(arr[i].id) && !S.has(arr[i-1].id)) { [arr[i-1], arr[i]] = [arr[i], arr[i-1]]; ch = true; } }
+  else { for (let i=arr.length-2; i>=0; i--) if (S.has(arr[i].id) && !S.has(arr[i+1].id)) { [arr[i+1], arr[i]] = [arr[i], arr[i+1]]; ch = true; } }
+  if (!ch) return; prDo(()=>{ pres.list = arr; });
+  const row = prSetEl.querySelector('.pr-item.msel'); if (row) row.scrollIntoView({ block:'nearest' });
+}
+function prMoveTo(ids, pos){   // pos：插入到当前列表的第几个位置之前
+  const set = new Set(ids), L = pres.list, moving = L.filter(x=>set.has(x.id));
+  const rest = L.filter(x=>!set.has(x.id)), at = pos - L.slice(0, pos).filter(x=>set.has(x.id)).length;
+  const arr = rest.slice(0, at).concat(moving, rest.slice(at));
+  if (arr.every((x,k)=>x===L[k])) return;
+  prDo(()=>{ pres.list = arr; });
+}
+
+/* 键盘（焦点在歌单里时） */
+prSetEl.addEventListener('keydown', e=>{
+  if (/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return;
+  const mod = e.ctrlKey || e.metaKey, k = e.key.toLowerCase(); let h = true;
+  if (mod && k==='c') prCopy(false);
+  else if (mod && k==='x') prCopy(true);
+  else if (mod && k==='v') prPaste();
+  else if (mod && k==='d') prDup();
+  else if (mod && k==='a') prSelAll();
+  else if (mod && k==='z') { if (e.shiftKey) prRedoDo(); else prUndoDo(); }
+  else if (mod && k==='y') prRedoDo();
+  else if (e.key==='Delete') prDelSel();
+  else if (e.key==='F2') prRename();
+  else if (e.altKey && (e.key==='ArrowUp' || e.key==='ArrowDown')) prMoveSel(e.key==='ArrowUp' ? -1 : 1);
+  else h = false;
+  if (h) { e.preventDefault(); e.stopPropagation(); }
+});
+
+/* 拖动：整行拖（抓名字或左边的 ⠿），多选时一起拖，按住 Alt/Ctrl 放下 = 复制 */
+function prDropMarks(){ prSetEl.querySelectorAll('.drop-b,.drop-a').forEach(x=>x.classList.remove('drop-b','drop-a')); }
+prSetEl.addEventListener('dragstart', e=>{
+  const r = e.target.closest('.pr-item'); if (!r || !e.target.closest('.tt,.pr-grip')) { e.preventDefault(); return; }
+  const it = pres.list[+r.dataset.i]; if (!it) return;
+  if (!pres.msel.has(it.id)) { pres.msel = new Set([it.id]); pres.manc = +r.dataset.i; prPaintSel(); }
+  prDragIds = pres.list.filter(x=>pres.msel.has(x.id)).map(x=>x.id);
+  e.dataTransfer.setData('application/x-hymn-item', prDragIds.join(',')); e.dataTransfer.setData('text/plain', it.title); e.dataTransfer.effectAllowed = 'copyMove';
+  try{ e.dataTransfer.setDragImage(r, 16, 16); }catch{}
+  setTimeout(()=>{ prSetEl.querySelectorAll('.pr-item.msel').forEach(x=>x.classList.add('dragging')); }, 0);
+});
+prSetEl.addEventListener('dragover', e=>{
+  if (!prDragIds) return; e.preventDefault();
+  e.dataTransfer.dropEffect = (e.altKey || e.ctrlKey || e.metaKey) ? 'copy' : 'move';
+  const rows = [...prSetEl.querySelectorAll('.pr-item')]; prDropMarks(); if (!rows.length) { prDropPos = 0; return; }
+  const r = e.target.closest('.pr-item');
+  if (r) { const b = r.getBoundingClientRect(), before = e.clientY < b.top + b.height/2; prDropPos = +r.dataset.i + (before ? 0 : 1); r.classList.add(before ? 'drop-b' : 'drop-a'); }
+  else { const last = rows[rows.length-1], b = last.getBoundingClientRect(); if (e.clientY < b.bottom) { prDropPos = pres.list.length; last.classList.add('drop-a'); } else { prDropPos = pres.list.length; last.classList.add('drop-a'); } }
+});
+prSetEl.addEventListener('dragleave', e=>{ if (!prSetEl.contains(e.relatedTarget)) prDropMarks(); });
+prSetEl.addEventListener('drop', e=>{
+  if (!prDragIds) return; e.preventDefault(); prDropMarks();
+  const ids = prDragIds, pos = prDropPos; prDragIds = null; prSetEl.querySelectorAll('.dragging').forEach(x=>x.classList.remove('dragging'));
+  if (pos < 0) return;
+  if (e.altKey || e.ctrlKey || e.metaKey) { const set = new Set(ids); prInsert(pres.list.filter(x=>set.has(x.id)), pos, '已复制 '+ids.length+' 项到这里'); }
+  else prMoveTo(ids, pos);
+});
+prSetEl.addEventListener('dragend', ()=>{ prDragIds = null; prDropMarks(); prSetEl.querySelectorAll('.dragging').forEach(x=>x.classList.remove('dragging')); });
+
+/* 右键菜单 */
+const prCtx = document.createElement('div'); prCtx.id = 'prCtx'; prCtx.hidden = true; document.body.appendChild(prCtx);
+const prCtxClose = ()=>{ prCtx.hidden = true; };
+function prCtxOpen(x, y, onRow){
+  const n = pres.msel.size, one = n===1, can = prClipGet().length > 0, nm = n>1 ? '（'+n+' 项）' : '';
+  const it = (a, t, key, ok=true)=>`<div class="ctx-i${ok ? '' : ' dis'}" data-a="${a}"><span>${t}</span><kbd>${key||''}</kbd></div>`;
+  prCtx.innerHTML = (onRow ? it('copy','复制'+nm, PR_MOD+'C') + it('cut','剪切'+nm, PR_MOD+'X') : '') + it('paste','粘贴', PR_MOD+'V', can)
+    + (onRow ? it('dup','创建副本'+nm, PR_MOD+'D') + it('ren','重命名…','F2', one) + '<div class="ctx-sep"></div>'
+      + it('up','上移', 'Alt+↑') + it('down','下移', 'Alt+↓') + it('top','移到最前','') + it('bot','移到最后','') + it('tolib','存入诗歌库'+nm,'') : '')
+    + '<div class="ctx-sep"></div>' + it('all','全选', PR_MOD+'A', pres.list.length>0) + (onRow ? it('del','删除'+nm,'Delete') : '');
+  prCtx.hidden = false;
+  const w = prCtx.offsetWidth, h = prCtx.offsetHeight;
+  prCtx.style.left = Math.max(4, Math.min(x, innerWidth - w - 4))+'px'; prCtx.style.top = Math.max(4, Math.min(y, innerHeight - h - 4))+'px';
+}
+prSetEl.addEventListener('contextmenu', e=>{
+  if (e.target.closest('input')) return; e.preventDefault();
+  const row = e.target.closest('.pr-item');
+  if (row) { const it = pres.list[+row.dataset.i]; if (it && !pres.msel.has(it.id)) { pres.msel = new Set([it.id]); pres.manc = +row.dataset.i; prPaintSel(); } }
+  prSetEl.focus({ preventScroll:true }); prCtxOpen(e.clientX, e.clientY, !!row);
+});
+prCtx.addEventListener('click', e=>{
+  const b = e.target.closest('.ctx-i'); if (!b || b.classList.contains('dis')) return; const a = b.dataset.a; prCtxClose(); prSetEl.focus({ preventScroll:true });
+  const items = prSelItems(), L = pres.list;
+  if (a==='copy') prCopy(false); else if (a==='cut') prCopy(true); else if (a==='paste') prPaste(); else if (a==='dup') prDup();
+  else if (a==='ren') prRename(); else if (a==='del') prDelSel(); else if (a==='all') prSelAll();
+  else if (a==='up') prMoveSel(-1); else if (a==='down') prMoveSel(1);
+  else if (a==='top') prMoveTo(items.map(x=>x.id), 0); else if (a==='bot') prMoveTo(items.map(x=>x.id), L.length);
+  else if (a==='tolib') items.forEach(x=>libSaveItem(x));
+});
+document.addEventListener('mousedown', e=>{ if (!prCtx.hidden && !prCtx.contains(e.target)) prCtxClose(); }, true);
+document.addEventListener('keydown', e=>{ if (e.key==='Escape' && !prCtx.hidden) { e.preventDefault(); e.stopPropagation(); prCtxClose(); } }, true);
+window.addEventListener('blur', prCtxClose); window.addEventListener('resize', prCtxClose); prSetEl.addEventListener('scroll', prCtxClose);
+prSetEl.addEventListener('dblclick', e=>{ const t = e.target.closest('.tt'); if (!t) return; const it = pres.list[+t.closest('.pr-item').dataset.i]; if (it) { pres.msel = new Set([it.id]); prRename(); } });
+
+/* ---- 键盘 / 按钮：观众屏、舞台屏各自开关；上下首 ---- */
+const presAudienceOn = ()=>!!(pres.out && castActive());
+function presAudienceOff(){
+  castSend({ t:'close' });
+  if (cast.win && !cast.win.closed) { try{ cast.win.close(); }catch{} }
+  if (cast.conn) { try{ cast.conn.terminate(); }catch{} }
+  cast.win = null; cast.conn = null; cast.black = false; clearInterval(cast.timer);
+  pres.out = false; castUI(); presPush();
+  $('prInfo').textContent = '观众屏已关闭（舞台屏不受影响）。按 O 可再次开启。';
+}
+function presToggleAudience(){ if (presAudienceOn()) presAudienceOff(); else $('prStart').click(); }
+const presStageOpen = ()=>!!(pres.stage && !pres.stage.closed);
+function presToggleStage(){
+  if (presStageOpen()) { try{ pres.stage.postMessage({ t:'close' }, '*'); pres.stage.close(); }catch{} pres.stage = null; presPush(); $('prInfo').textContent = '舞台屏已关闭。按 T 可再次开启。'; }
+  else presOpenStage();
+}
+function presSong(d){
+  const n = pres.sel + d; if (n < 0 || n >= pres.list.length) return;
+  pres.sel = n; pres.cur = -1; pres.mode = 'lyric'; pres.msel = new Set([pres.list[n].id]); pres.manc = n; presRegen(); presRender(); presPush();
+}
+
+/* ---- 提示信息条 ---- */
+const MSG_KEY = 'hymnMsgs'; let msgPre = null;
+try { msgPre = JSON.parse(localStorage.getItem(MSG_KEY)); } catch {}
+if (!Array.isArray(msgPre)) msgPre = ['请将手机调为静音', '欢迎初次来访的朋友', '请起立'];
+const msgSaveList = ()=>{ try{ localStorage.setItem(MSG_KEY, JSON.stringify(msgPre)); }catch{} };
+function msgRender(){
+  $('prMsgChips').innerHTML = msgPre.map((m,i)=>`<span class="lk"><button type="button" data-i="${i}">${annEsc(m)}</button><button type="button" class="x" data-del="${i}" title="删除">×</button></span>`).join('');
+  $('prMsgBtn').textContent = pres.msg.on ? '隐藏信息（M）' : '显示信息（M）'; $('prMsgBtn').classList.toggle('on', pres.msg.on);
+}
+function presToggleMsg(){
+  const t = $('prMsgIn').value.trim();
+  if (!pres.msg.on && !t) { $('prInfo').textContent = '先在「提示信息条」输入要显示的话，再按 M。'; $('prMsgIn').focus(); return; }
+  pres.msg.text = t; pres.msg.on = !pres.msg.on; msgRender(); presPush();
+}
+$('prMsgBtn').addEventListener('click', presToggleMsg);
+$('prMsgIn').addEventListener('input', ()=>{ if (pres.msg.on) { pres.msg.text = $('prMsgIn').value.trim(); presPush(); } });
+$('prMsgIn').addEventListener('keydown', e=>{ if (e.key==='Enter') { e.preventDefault(); if (!pres.msg.on) presToggleMsg(); } });
+$('prMsgSave').addEventListener('click', ()=>{ const t = $('prMsgIn').value.trim(); if (!t || msgPre.includes(t)) return; msgPre.push(t); msgSaveList(); msgRender(); });
+$('prMsgChips').addEventListener('click', e=>{
+  const d = e.target.closest('[data-del]'); if (d) { msgPre.splice(+d.dataset.del, 1); msgSaveList(); msgRender(); return; }
+  const b = e.target.closest('button[data-i]'); if (!b) return;
+  $('prMsgIn').value = msgPre[+b.dataset.i]; pres.msg.text = $('prMsgIn').value; pres.msg.on = true; msgRender(); presPush();
+});
+msgRender();
+
 /* ---- 输出 / 舞台屏 / 按钮 ---- */
 $('presOpenBtn').addEventListener('click', presOpen);
 $('prClose').addEventListener('click', ()=>{ $('pres').hidden = true; document.body.style.overflow = ''; });
@@ -3556,7 +3933,7 @@ async function presOpenStage(){
 }
 /* ---- 顶部菜单：文字样式 / 输出屏幕 / 舞台屏设置（下拉面板，点面板外或按 Esc 收起） ---- */
 const PR_MENU_TT = { style:'文字样式（观众屏）', screens:'输出屏幕', stage:'舞台屏设置（敬拜团队看的屏）' };
-const PR_UNIT = { prSize:'%', stSplit:'%', stLh:'%' };
+const PR_UNIT = { prSize:'%', stSplit:'%', stLh:'%', prShAmt:'%', prLh:'%', prFade:' ms' };
 function prPopVals(){
   $('prPop').querySelectorAll('input[type=range]').forEach(r=>{
     const lab = r.previousElementSibling; if (!lab || lab.tagName!=='LABEL') return;
@@ -3588,7 +3965,7 @@ $('prClose').addEventListener('click', ()=>prMenu(''));
 document.addEventListener('pointerdown', e=>{ if (pres.menu && !(e.target.closest && e.target.closest('#prPop, #prMenus'))) prMenu(''); }, true);
 document.addEventListener('keydown', e=>{ if (e.key==='Escape' && pres.menu && !$('pres').hidden) { e.preventDefault(); e.stopPropagation(); prMenu(''); } }, true);
 window.addEventListener('resize', ()=>{ if (pres.menu) prMenu(pres.menu); });
-$('prStage').addEventListener('click', presOpenStage);
+$('prStage').addEventListener('click', presToggleStage);
 $('prScrGo').addEventListener('click', async ()=>{
   if (!cast.det) await castDetect();
   pres.out = true; if (cast.win && !cast.win.closed) { cast.win.focus(); castPushAll(); } else castStartLocal();
