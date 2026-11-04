@@ -682,6 +682,31 @@ html.recv body>*:not(#recv):not(script){display:none!important}
 .ctx-i:hover kbd{color:#dbe7ff}
 .ctx-i.dis{opacity:.4;pointer-events:none}
 .ctx-sep{height:1px;background:#33363d;margin:4px 2px}
+/* 幻灯片：选择 / 拖动 / 工具条 / 编辑弹窗 */
+.pr-sltool{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:0 0 8px;position:sticky;top:0;z-index:3;background:#16171a;padding:2px 0 6px}
+.pr-sltool[hidden]{display:none}
+.pr-sltool button{padding:5px 10px;font-size:12.5px}
+.pr-sltool button[hidden]{display:none}
+.pr-sltool button:disabled{opacity:.4;pointer-events:none}
+.pr-sltool .hint{color:#8ea0bd;font-size:12px}
+.pr-sltip{flex-basis:100%;color:#8ea0bd;font-size:12px;line-height:1.6}
+#prSlides{outline:none}
+.pr-card{user-select:none;-webkit-user-select:none}
+.pr-card.ssel{outline:2px solid #3b82f6;outline-offset:1px}
+.pr-card.sdragging{opacity:.4}
+.pr-card.sdrop-b{box-shadow:-7px 0 0 -1px #22c55e}
+.pr-card.sdrop-a{box-shadow:7px 0 0 -1px #22c55e}
+#prCtx,#prSlCtx{position:fixed;z-index:3000;background:#1b1d22;border:1px solid #3a3d44;border-radius:9px;padding:4px;min-width:210px;box-shadow:0 12px 34px #000a;color:#dfe3ea;font-size:13px}
+#prSlCtx[hidden]{display:none}
+#prSlEd{position:fixed;inset:0;z-index:3200;background:#000a;display:flex;align-items:center;justify-content:center;padding:16px}
+#prSlEd[hidden]{display:none}
+.sled-box{width:min(520px,100%);background:#1b1d22;border:1px solid #3a3d44;border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:10px;color:#dfe3ea;box-shadow:0 20px 60px #000c}
+.sled-h{font-weight:700;font-size:15px}
+.sled-box label{display:flex;flex-direction:column;gap:4px;font-size:12.5px;color:#a9b4c8}
+.sled-box input,.sled-box textarea{font-size:16px;padding:8px 10px;background:#101114;color:#fff;border:1px solid #3a3d44;border-radius:8px;font-family:inherit;line-height:1.5}
+.sled-box textarea{resize:vertical;min-height:140px}
+.sled-a{display:flex;gap:8px;align-items:center;justify-content:flex-end}
+.sled-a .hint{margin-right:auto;color:#8ea0bd;font-size:12px}
 </style>
 <script>var IDLE_SVG='<svg class="idle-ico" viewBox="0 0 48 48" fill="none" aria-hidden="true"><rect x="4" y="4" width="40" height="40" rx="11" fill="currentColor" opacity=".12"/><path d="M19 32V15l13-3v17" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><circle cx="16" cy="33" r="4" fill="currentColor"/><circle cx="29" cy="30" r="4" fill="currentColor"/></svg>';
 function ssFallback(img){ img.onerror=null; img.outerHTML=IDLE_SVG; }   // ss.png 不存在时换成内置图标
@@ -1125,7 +1150,7 @@ function ssFallback(img){ img.onerror=null; img.outerHTML=IDLE_SVG; }   // ss.pn
     </div>
     <div class="pr-center">
       <div class="pr-ph">幻灯片<span id="prSlTitle"></span></div>
-<div class="pr-pane" data-pane="slides" hidden><div class="pr-sl" id="prSlides"></div></div>
+<div class="pr-pane" data-pane="slides" hidden><div class="pr-sltool" id="prSlTool" hidden><button type="button" id="slAdd">＋ 新增</button><button type="button" id="slEdit">✎ 编辑</button><button type="button" id="slDup">⧉ 副本</button><button type="button" class="danger" id="slDel">✕ 删除</button><button type="button" id="slReset" hidden>↺ 还原自动分页</button><span class="hint" id="slInfo"></span><div class="pr-sltip">拖动换位置（Alt 拖 = 复制）· Ctrl/⌘ 点击多选，Shift 点击连选 · 双击或 F2 编辑 · Delete 删除 · Alt+←→ 移动 · Ctrl+C/X/V/D · Ctrl+Z 撤销 · 右键更多</div></div><div class="pr-sl" id="prSlides"></div></div>
     </div>
     <div class="pr-bottom">
       <div class="pr-ph">背景 / 外观</div>
@@ -1342,6 +1367,8 @@ const COMMON_BOOKS=['灵栖清泉','挖晒谱','和弦简谱','赞美之泉','�
 const normBook=x=>String(x||'').replace(/[《》\s()（）]/g,'').replace(/硒/g,'晒').toLowerCase();
 const bookMatch=(a,b)=>{ a=normBook(a); b=normBook(b); return !!a&&!!b&&(a.includes(b)||b.includes(a)); };
 function selBookName(){ return $('bookName').value.trim(); }
+/* 歌本名→ID 的映射一部分来自后台歌本列表（serverBooks）；诗歌本模式下它可能还没加载，这里按需补载（失败不影响搜索） */
+async function ensureBookIds(){ try{ await fetchServerBooks(); }catch{} }
 function bookIdByName(nm){
   if(!nm) return null;
   if(/^\d+$/.test(nm.trim())) return Number(nm); const m=loadBooks();
@@ -1370,8 +1397,8 @@ function effBookId(){
   if(nm) return bookIdByName(nm)??0;
   return Number.parseInt($('bookId').value||'0',10)||0;
 }
-function filterByBook(rows){
-  const nm=selBookName(); if(!nm||bookIdByName(nm)!=null) return rows;
+function filterByBook(rows,force){
+  const nm=selBookName(); if(!nm||(!force&&bookIdByName(nm)!=null)) return rows;
   return rows.filter(r=>bookMatch(r.bookName||r.songbookName||r.mSongbook||r.songbook,nm));
 }
 function chipNames(){
@@ -2108,6 +2135,7 @@ async function search(){
   if (!base) { showStatus('请填写 API 基础地址。'); return; }
   saveSettings();
   $('moreWrap').hidden = true;
+  if (selBookName() && !/^\d+$/.test(selBookName())) await ensureBookIds();
   const bookId = effBookId();
   const url = new URL(base + '/image/searchByName');
   url.searchParams.set('key', keyword);
@@ -2122,24 +2150,33 @@ async function search(){
   $('exportBtn').disabled = true;
   showStatus('搜索中…');
   try {
-    const { res, text, data } = await hymnGet(url);
+    let { res, text, data } = await hymnGet(url);
     if (gen !== searchGen) return;
+    let byName = false;
+    const badResp = ()=>!res.ok || (data && data.msg && !Array.isArray(data));
+    // 按歌本 ID 请求被接口拒绝（ID 不对应接口里的歌本等）：退回 bookId=0，再按歌本名在结果里过滤
+    if (bookId > 0 && selBookName() && !/^\d+$/.test(selBookName()) && badResp()) {
+      url.searchParams.set('bookId', '0'); byName = true;
+      ({ res, text, data } = await hymnGet(url));
+      if (gen !== searchGen) return;
+    }
     if (!res.ok) throw new Error(`HTTP ${res.status}：${typeof data === 'object' ? (data.msg || data.message || text) : text}`);
-    if (data && data.msg) throw new Error(data.msg);
-    latestResults = normalizeRows(data); learnBooks(latestResults); const rawN = latestResults.length; latestResults = filterByBook(latestResults);
+    if (data && data.msg && !Array.isArray(data)) throw new Error(data.msg);
+    latestResults = normalizeRows(data); learnBooks(latestResults); const rawN = latestResults.length; latestResults = filterByBook(latestResults, byName);
     $('resultTitle').textContent = `搜索结果（${latestResults.length} 条）`;
     renderRows(latestResults);
     $('exportBtn').disabled = !latestResults.length;
     showStatus(latestResults.length ? '搜索完成，歌谱图片正在自动加载；点击图片可放大。'
-      : (selBookName() && rawN ? `接口返回的 ${rawN} 条里没有「${selBookName()}」。接口单次返回条数有限，歌本较冷门时可能被挤出去：请换更具体的歌名，或在歌本框直接输入该歌本的数字 ID。`
-      : '请求成功，但没有识别到结果数组，可展开“查看原始响应”检查。'));
-    if (latestResults.length && selBookName() && bookIdByName(selBookName())==null && rawN>=takeSize()) showStatus(`已在 ${rawN} 条中按歌本名过滤；结果可能不全，建议输入更具体的歌名或该歌本的数字 ID。`);
+      : (selBookName() && rawN ? `在「${selBookName()}」里没有找到「${keyword}」（接口返回的 ${rawN} 条都属于其他歌本）。可换更具体的歌名，或点歌本框右侧 ✕ 取消歌本限制。`
+      : selBookName() ? `在「${selBookName()}」里没有找到「${keyword}」，可换个关键词，或点歌本框右侧 ✕ 取消歌本限制。`
+      : '没有找到结果，可尝试更短的歌名关键词。'));
+    if (latestResults.length && selBookName() && (byName || bookIdByName(selBookName())==null) && rawN>=takeSize()) showStatus(`已在 ${rawN} 条中按歌本名「${selBookName()}」过滤，结果可能不全；可输入更具体的歌名。`);
   } catch (err) {
     if (gen !== searchGen) return;
     latestResults = [];
     $('resultTitle').textContent = '搜索未完成';
     $('results').innerHTML = '<div class="empty">请求失败，请查看顶部提示。</div>';
-    showStatus('错误：' + (err?.message || String(err)) + '\n常见原因：API 不可用、跨域限制、登录权限不足、设备签名失败。');
+    showStatus('错误：' + (err?.message || String(err)) + '\n常见原因：API 不可用、跨域限制、登录权限不足、设备签名失败。' + (selBookName() ? '\n当前限定歌本「' + selBookName() + '」，可点歌本框右侧 ✕ 取消限制后重试。' : ''));
   } finally { if (gen === searchGen) { $('searchBtn').disabled = false; setProgress(false); } }
 }
 
@@ -3049,7 +3086,7 @@ async function presShDelete(){
   pres.si = Math.max(0, pres.si-1); presSave(); presPush();
 }
 const PRES_DEF = { bg:{ type:'grad', id:'ocean', fx:true }, dim:.25, linesPer:2, font:{ family:'sans', max:12, color:'#ffffff', bold:true, shadow:true, align:'center', pos:'c' } };
-const pres = { mode:'lyric', msel:new Set(), manc:0, clip:null, msg:{ text:'', on:false }, bibleSet:{ per:1, nums:true, refPos:'bottom', refSize:5 }, si:0, _ks:-1, stageSet:Object.assign({}, ST_DEF), stageView:null, list:[], sel:0, slides:[], cur:-1, black:false, clear:false, out:false, stage:null, view:null, tab:'list', bg:PRES_DEF.bg, dim:PRES_DEF.dim, linesPer:PRES_DEF.linesPer, font:Object.assign({}, PRES_DEF.font) };
+const pres = { mode:'lyric', ssel:new Set(), sselSong:'', sanc:0, sclip:null, msel:new Set(), manc:0, clip:null, msg:{ text:'', on:false }, bibleSet:{ per:1, nums:true, refPos:'bottom', refSize:5 }, si:0, _ks:-1, stageSet:Object.assign({}, ST_DEF), stageView:null, list:[], sel:0, slides:[], cur:-1, black:false, clear:false, out:false, stage:null, view:null, tab:'list', bg:PRES_DEF.bg, dim:PRES_DEF.dim, linesPer:PRES_DEF.linesPer, font:Object.assign({}, PRES_DEF.font) };
 try {
   const s = JSON.parse(localStorage.getItem('hymnPresSet')||'null'); if (s) { if (s.bg) pres.bg = s.bg; if (typeof s.dim==='number') pres.dim = s.dim; if (s.linesPer!=null) pres.linesPer = +s.linesPer; if (s.font) Object.assign(pres.font, s.font); if (s.bible) Object.assign(pres.bibleSet, s.bible); if (s.stage) Object.assign(pres.stageSet, s.stage); }
   const l = JSON.parse(localStorage.getItem('hymnSetlist')||'[]'); if (Array.isArray(l)) pres.list = l.filter(x=>x && x.title && (x.text || x.type==='ppt' || x.type==='bible')); pres.list.forEach((x,k)=>{ if (!x.id) x.id = 's'+Date.now().toString(36)+k; });
@@ -3059,6 +3096,7 @@ pres.libs = []; pres.libSel = ''; pres.target = null;
 try { const l = JSON.parse(localStorage.getItem('hymnLibs')||'[]'); if (Array.isArray(l)) pres.libs = l.filter(x=>x && x.id && Array.isArray(x.items)); pres.libSel = localStorage.getItem('hymnLibSel')||''; } catch {}
 function presMakeSlides(item){
   if (!item) return [];
+  if (Array.isArray(item.slides) && item.type!=='ppt') return item.slides.map(s=>({ label:s.label, text:s.text, key:s.key, ref:s.ref, sec:0 }));
   if (item.type==='bible') {
     const vs = item.verses || [], bs = pres.bibleSet, per = bs.per>0 ? bs.per : (vs.length||1), out = [];
     for (let i=0; i<vs.length; i+=per) {
@@ -3133,12 +3171,12 @@ function presGo(i, keepSel){
   pres.black = false; pres.clear = false; presRender(); presPush();
 }
 function presRegen(){ pres.slides = presMakeSlides(pres.list[pres.sel]); }
-function presHue(label, item){ const { secs } = arrParse(item.text); const i = secs.findIndex(x=>x.label===label); return 'hsl('+((i<0?0:i)*57+210)%360+',55%,38%)'; }
+function presHue(label, item){ const { secs } = arrParse(item.text); const i = secs.findIndex(x=>x.label===label), n = i>=0 ? i : (item.type==='bible' ? 0 : Math.abs([...String(label)].reduce((a,c)=>(a*31+c.charCodeAt(0))|0, 7)) % 7); return 'hsl('+(n*57+210)%360+',55%,38%)'; }
 function presRender(){
   const it = pres.list[pres.sel];
   $('prSet').innerHTML = pres.list.length ? pres.list.map((x,i)=>`<div class="pr-item${i===pres.sel?' on':''}${pres.msel.has(x.id)?' msel':''}" data-i="${i}">
       <span class="pr-grip" draggable="true" title="拖动排序">⠿</span><span class="tt" data-act="sel" draggable="true" title="拖动可调整顺序，双击重命名">${i+1}. ${annEsc(x.title)}</span>
-      ${x.type==='ppt' ? `<span class="hint" style="color:#8ea0bd">PPT · ${x.count} 页</span>` : x.type==='bible' ? `<span class="hint" style="color:#8ea0bd">圣经 · ${(x.verses||[]).length} 节</span>` : `<input data-act="ord" value="${annEsc(x.order||'')}" placeholder="ABAB" autocapitalize="characters" autocomplete="off" spellcheck="false">`}
+      ${x.type==='ppt' ? `<span class="hint" style="color:#8ea0bd">PPT · ${x.count} 页</span>` : x.type==='bible' ? `<span class="hint" style="color:#8ea0bd">圣经 · ${(x.verses||[]).length} 节${Array.isArray(x.slides) ? ' · 已自定义' : ''}</span>` : Array.isArray(x.slides) ? `<span class="hint" style="color:#8ea0bd" title="在幻灯片页点「还原自动分页」可恢复按顺序生成">自定义 ${x.slides.length} 页</span>` : `<input data-act="ord" value="${annEsc(x.order||'')}" placeholder="ABAB" autocapitalize="characters" autocomplete="off" spellcheck="false">`}
       <button type="button" data-act="up">↑</button>${x.type==='ppt' || x.type==='bible' ? '' : '<button type="button" data-act="edit">✎ 分段</button>'}<button type="button" data-act="tolib">存库</button><button type="button" data-act="del" class="danger">✕</button></div>`).join('')
     : '<div class="hint" style="color:#8ea0bd">歌单还是空的。</div>';
   if (it) presRenderSlides(); else $('prSlides').innerHTML = '<div class="hint" style="color:#8ea0bd">先添加歌曲。</div>';
@@ -3148,7 +3186,7 @@ function presMkItem(it){
   return Object.assign({ id:String(Date.now())+Math.random().toString(36).slice(2,5), title:it.title||'未命名', text:it.text||'', order:it.order||'' },
     it.type==='ppt' ? { type:'ppt', deckId:it.deckId, count:it.count, texts:it.texts, notes:it.notes, bgs:it.bgs } : {},
     it.type==='bible' ? { type:'bible', bookName:it.bookName, ch:it.ch, verses:it.verses } : {},
-    it.sheets && it.sheets.length ? { sheets:it.sheets } : {}, it.bg ? { bg:it.bg } : {}, it.sbg ? { sbg:it.sbg } : {});
+    it.sheets && it.sheets.length ? { sheets:it.sheets } : {}, it.bg ? { bg:it.bg } : {}, it.sbg ? { sbg:it.sbg } : {}, Array.isArray(it.slides) ? { slides:it.slides } : {});
 }
 function presAddItem(it){
   if (pres.target) { libEnsure(); const lib = pres.libs.find(l=>l.id===pres.target) || libCur(); lib.items.push(presMkItem(it)); presSave(); libRender(); return; }
@@ -3301,7 +3339,7 @@ $('prSet').addEventListener('click', e=>{
   else if (act==='up' && i>0) { pres.msel = new Set([it.id]); pres.manc = i; prMoveSel(-1); }
   else if (act==='del') { prDelete([it]); }
   else if (act==='tolib') libSaveItem(it);
-  else if (act==='edit') arrOpen(null, { custom:true, title:it.title, text:it.text, order:it.order, applyLabel:'应用到歌单', onApply:(text,order)=>{ it.text = text; it.order = order; if (pres.sel===i) { pres.cur = -1; presRegen(); } presSave(); presRender(); presPush(); } });
+  else if (act==='edit') arrOpen(null, { custom:true, title:it.title, text:it.text, order:it.order, applyLabel:'应用到歌单', onApply:(text,order)=>{ if (Array.isArray(it.slides)) { if (!confirm('这首歌的幻灯片已经自定义过。应用分段会丢掉这些修改，按新分段重新生成。继续吗？')) return; delete it.slides; } it.text = text; it.order = order; if (pres.sel===i) { pres.cur = -1; presRegen(); } presSave(); presRender(); presPush(); } });
 });
 $('prSet').addEventListener('input', e=>{
   if (e.target.dataset.act!=='ord') return; const i = +e.target.closest('.pr-item').dataset.i; pres.list[i].order = e.target.value.trim(); presSave();
@@ -3318,20 +3356,21 @@ function presThumbStyle(s){
   return '';
 }
 function presCard(s, i, it){
-  const on = i===pres.cur ? ' on' : '';
+  const on = (i===pres.cur ? ' on' : '') + (pres.sselSong===it.id && pres.ssel.has(i) ? ' ssel' : '');
   if (s.ppt) return `<div class="pr-card${on}" data-i="${i}" data-n="${i+1}"><img data-d="${annEsc(s.ppt.deck)}" data-x="${s.ppt.idx}" alt=""><b style="background:#475569">${annEsc(s.label)}</b></div>`;
   const col = annColor(pres.font.color||'#ffffff');
-  return `<div class="pr-card${on}" data-i="${i}" data-n="${i+1}" style="${presThumbStyle(s)};color:${col}"><b style="background:${presHue(s.label,it)}">${annEsc(s.label)}</b><span class="pt">${annEsc(s.text)}</span>${it.sbg && s.key && it.sbg[s.key] ? '<em class="pr-bgm">背景</em>' : ''}</div>`;
+  return `<div class="pr-card${on}" data-i="${i}" data-n="${i+1}" draggable="true" style="${presThumbStyle(s)};color:${col}"><b style="background:${presHue(s.label,it)}">${annEsc(s.label)}</b><span class="pt">${annEsc(s.text)}</span>${it.sbg && s.key && it.sbg[s.key] ? '<em class="pr-bgm">背景</em>' : ''}</div>`;
 }
 function presRenderSlides(){
   const it = pres.list[pres.sel];
   $('prSlTitle').textContent = it ? '  ·  '+it.title : '';
+  prSlToolSync();
   let html = '', last = null;
   if (it && pres.slides.length) pres.slides.forEach((s,i)=>{
     if (!s.ppt && !s.ref && s.label!==last) { html += `<div class="pr-gh" style="--c:${presHue(s.label,it)}">${annEsc(s.label)}</div>`; last = s.label; }
     html += presCard(s,i,it);
   });
-  $('prSlides').innerHTML = html || '<div class="hint" style="color:#8ea0bd">这首歌没有可显示的段落：请检查分段标记和演唱顺序。</div>';
+  $('prSlides').innerHTML = html || '<div class="hint" style="color:#8ea0bd">这首歌没有可显示的幻灯片：请检查分段标记和演唱顺序，或点上方「＋ 新增」自己加一页。</div>';
   $('prSlides').querySelectorAll('img[data-d]').forEach(im=>pptUrl(im.dataset.d, +im.dataset.x).then(u=>{ im.src = u; }));
   const on = $('prSlides').querySelector('.pr-card.on'); if (on) on.scrollIntoView({ block:'nearest' });
 }
@@ -3375,7 +3414,7 @@ function libRender(){
   $('libInfo').textContent = '「'+lib.name+'」共 '+lib.items.length+' 项';
   $('libItems').innerHTML = lib.items.length ? lib.items.map((x,i)=>`<div class="pr-item" data-i="${i}">
       <span class="tt">${annEsc(x.title)}</span>
-      ${x.type==='ppt' ? `<span class="hint" style="color:#8ea0bd">PPT · ${x.count} 页</span>` : x.type==='bible' ? `<span class="hint" style="color:#8ea0bd">圣经 · ${(x.verses||[]).length} 节</span>` : `<input data-act="ord" value="${annEsc(x.order||'')}" placeholder="ABAB" autocapitalize="characters" autocomplete="off" spellcheck="false">`}
+      ${x.type==='ppt' ? `<span class="hint" style="color:#8ea0bd">PPT · ${x.count} 页</span>` : x.type==='bible' ? `<span class="hint" style="color:#8ea0bd">圣经 · ${(x.verses||[]).length} 节${Array.isArray(x.slides) ? ' · 已自定义' : ''}</span>` : Array.isArray(x.slides) ? `<span class="hint" style="color:#8ea0bd" title="在幻灯片页点「还原自动分页」可恢复按顺序生成">自定义 ${x.slides.length} 页</span>` : `<input data-act="ord" value="${annEsc(x.order||'')}" placeholder="ABAB" autocapitalize="characters" autocomplete="off" spellcheck="false">`}
       <button type="button" data-act="add">＋歌单</button><button type="button" data-act="go" class="pri">▶ 放映</button><button type="button" data-act="up">↑</button>${x.type==='ppt' || x.type==='bible' ? '' : '<button type="button" data-act="edit">✎ 分段</button>'}<button type="button" data-act="del" class="danger">✕</button></div>`).join('')
     : '<div class="hint" style="color:#8ea0bd">这个库还是空的：用下方按钮添加，或在歌单里点「存库」。</div>';
 }
@@ -3410,7 +3449,7 @@ $('libItems').addEventListener('click', e=>{
   else if (act==='del') { if (!confirm('从库「'+lib.name+'」移除「'+it.title+'」？')) return; lib.items.splice(i,1);
     if (it.type==='ppt' && !deckInUse(it.deckId, it)) { bgdb.del(it.deckId).catch(()=>{}); pptCache.delete(it.deckId); }
     (it.sheets||[]).forEach(sh=>{ sheetdb.del(sh.id).catch(()=>{}); sheetCache.delete(sh.id); }); presSave(); libRender(); }
-  else if (act==='edit') arrOpen(null, { custom:true, title:it.title, text:it.text, order:it.order, applyLabel:'应用到库', onApply:(text,order)=>{ it.text = text; it.order = order; presSave(); libRender(); } });
+  else if (act==='edit') arrOpen(null, { custom:true, title:it.title, text:it.text, order:it.order, applyLabel:'应用到库', onApply:(text,order)=>{ if (Array.isArray(it.slides)) { if (!confirm('这首歌的幻灯片已经自定义过。应用分段会丢掉这些修改，按新分段重新生成。继续吗？')) return; delete it.slides; } it.text = text; it.order = order; presSave(); libRender(); } });
 });
 $('libItems').addEventListener('input', e=>{ if (e.target.dataset.act!=='ord') return; const i = +e.target.closest('.pr-item').dataset.i; libCur().items[i].order = e.target.value.trim(); presSave(); });
 
@@ -3673,8 +3712,8 @@ function prPushUndo(){
 function prRestore(s){
   const o = JSON.parse(s), was = (pres.list[pres.sel]||{}).id, wasCur = pres.cur;
   pres.list = o.list; const n = o.list.findIndex(x=>x.id===o.sel); pres.sel = n < 0 ? 0 : n;
-  pres.msel = new Set(); pres.manc = pres.sel; presRegen();
-  pres.cur = (n >= 0 && o.sel===was) ? Math.min(wasCur, pres.slides.length-1) : -1;
+  pres.msel = new Set(); pres.manc = pres.sel; pres.ssel = new Set(); presRegen();
+  pres.cur = (n >= 0 && o.sel===was) ? Math.min(typeof o.cur==='number' ? o.cur : wasCur, pres.slides.length-1) : -1;
   presSave(); presRender(); presPush();
 }
 function prUndoDo(){ if (!prUndo.length) { prToast('没有可撤销的操作'); return; } prRedo.push(prSnap()); prRestore(prUndo.pop()); prToast('已撤销（Shift+'+PR_MOD+'Z 重做）'); }
@@ -3703,6 +3742,7 @@ prSetEl.addEventListener('click', e=>{   // 捕获阶段：Shift 连选、Ctrl/�
   if (e.shiftKey) { e.stopImmediatePropagation(); const a = Math.min(pres.manc||0, i), b = Math.max(pres.manc||0, i); pres.msel = new Set(pres.list.slice(a, b+1).map(x=>x.id)); prPaintSel(); return; }
   if (e.ctrlKey || e.metaKey) { e.stopImmediatePropagation(); if (pres.msel.has(it.id)) pres.msel.delete(it.id); else pres.msel.add(it.id); pres.manc = i; prPaintSel(); return; }
   pres.msel = new Set([it.id]); pres.manc = i;
+  if (e.detail >= 2 && e.target.closest('.tt')) setTimeout(prRename, 0);
   if (!e.target.closest('.tt')) { e.stopImmediatePropagation(); pres.sel = i; pres.cur = -1; presRegen(); presRender(); presPush(); presTab('slides'); }
 }, true);
 
@@ -3841,6 +3881,237 @@ document.addEventListener('mousedown', e=>{ if (!prCtx.hidden && !prCtx.contains
 document.addEventListener('keydown', e=>{ if (e.key==='Escape' && !prCtx.hidden) { e.preventDefault(); e.stopPropagation(); prCtxClose(); } }, true);
 window.addEventListener('blur', prCtxClose); window.addEventListener('resize', prCtxClose); prSetEl.addEventListener('scroll', prCtxClose);
 prSetEl.addEventListener('dblclick', e=>{ const t = e.target.closest('.tt'); if (!t) return; const it = pres.list[+t.closest('.pr-item').dataset.i]; if (it) { pres.msel = new Set([it.id]); prRename(); } });
+
+/* ---- 幻灯片：多选 / 拖动排序 / 编辑 / 新增 / 复制粘贴 / 删除 / 还原自动分页 ----
+   歌词原本是按「分段 + 演唱顺序」自动切页的。第一次对某一页做改动时，这首歌的幻灯片会固定成一份清单 item.slides，
+   之后可以随意改、挪、删；点「还原自动分页」就丢掉清单，回到按分段自动生成。 */
+const prSlEl = $('prSlides');
+prSlEl.tabIndex = 0;
+let prSlDrag = null, prSlDropPos = -1;
+const prNewKey = ()=>'n'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+const prSlItem = ()=>{ const it = pres.list[pres.sel]; return it && it.type!=='ppt' ? it : null; };
+
+/* 选择（按位置编号；换歌就清空） */
+function prSlSel(){
+  const it = pres.list[pres.sel];
+  if (!it || pres.sselSong!==it.id) { pres.ssel = new Set(); pres.sselSong = it ? it.id : ''; }
+  return [...pres.ssel].filter(i=>i<pres.slides.length).sort((a,b)=>a-b);
+}
+function prSlPaint(){ const s = new Set(prSlSel()); prSlEl.querySelectorAll('.pr-card').forEach(c=>c.classList.toggle('ssel', s.has(+c.dataset.i))); prSlToolSync(); }
+function prSlSetSel(arr, anchor){ const it = pres.list[pres.sel]; pres.sselSong = it ? it.id : ''; pres.ssel = new Set(arr); if (anchor!=null) pres.sanc = anchor; }
+function prSlToolSync(){
+  const tool = $('prSlTool'); if (!tool) return; const it = pres.list[pres.sel];
+  tool.hidden = !it || it.type==='ppt'; if (tool.hidden) return;
+  const n = prSlSel().length;
+  $('slEdit').disabled = n!==1; $('slDup').disabled = n<1; $('slDel').disabled = n<1; $('slReset').hidden = !Array.isArray(it.slides);
+  $('slInfo').textContent = Array.isArray(it.slides) ? '已自定义 '+it.slides.length+' 页' : (n ? '已选 '+n+' 页' : '');
+  if (Array.isArray(it.slides) && n) $('slInfo').textContent = '已选 '+n+' 页 · 共 '+it.slides.length+' 页（自定义）';
+}
+
+/* 改动入口：固定成清单 → 改 → 保持正在放映的那页不变 → 选中结果 */
+function prSlFreeze(it){
+  if (Array.isArray(it.slides)) return;
+  const seen = new Set(); it.sbg = it.sbg || {};
+  it.slides = presMakeSlides(it).map(s=>{
+    let key = s.key || prNewKey();
+    if (seen.has(key)) { const nk = prNewKey(); if (it.sbg[key]) it.sbg[nk] = it.sbg[key]; key = nk; }
+    seen.add(key); const o = { label:s.label, text:s.text, key }; if (s.ref) o.ref = s.ref; return o;
+  });
+  if (!Object.keys(it.sbg).length) delete it.sbg;
+}
+function prSlDo(fn){
+  const it = prSlItem(); if (!it) return false;
+  const cur0 = pres.cur; let live = null, selAfter = [];
+  prDo(()=>{ prSlFreeze(it); live = cur0 >= 0 ? it.slides[cur0] : null; selAfter = fn(it) || []; });
+  pres.cur = live ? it.slides.indexOf(live) : -1;
+  prSlSetSel(selAfter, selAfter[0]); presRender(); presPush(); return true;
+}
+function prSlClone(it, s){
+  const k = prNewKey(), o = { label:s.label, text:s.text, key:k }; if (s.ref) o.ref = s.ref;
+  if (it.sbg && it.sbg[s.key]) { it.sbg = it.sbg; it.sbg[k] = it.sbg[s.key]; } return o;
+}
+
+/* 排列：perm[k] = 新位置 k 放原来的第几页 */
+function prSlPermMove(n, sel, pos){
+  const S = new Set(sel), rest = [...Array(n).keys()].filter(i=>!S.has(i)), at = pos - sel.filter(i=>i<pos).length;
+  return rest.slice(0, at).concat(sel, rest.slice(at));
+}
+function prSlApplyPerm(perm, sel){
+  if (perm.every((v,k)=>v===k)) return; const S = new Set(sel);
+  prSlDo(it=>{ const L = it.slides; it.slides = perm.map(i=>L[i]); return perm.map((v,k)=>S.has(v) ? k : -1).filter(k=>k>=0); });
+}
+function prSlStep(d){
+  const sel = prSlSel(); if (!sel.length) return; const S = new Set(sel), a = [...Array(pres.slides.length).keys()];
+  if (d < 0) { for (let i=1; i<a.length; i++) if (S.has(a[i]) && !S.has(a[i-1])) [a[i-1], a[i]] = [a[i], a[i-1]]; }
+  else { for (let i=a.length-2; i>=0; i--) if (S.has(a[i]) && !S.has(a[i+1])) [a[i+1], a[i]] = [a[i], a[i+1]]; }
+  prSlApplyPerm(a, sel);
+  const c = prSlEl.querySelector('.pr-card.ssel'); if (c) c.scrollIntoView({ block:'nearest' });
+}
+
+/* 删除 / 副本 / 复制粘贴 */
+function prSlDelete(idxs, msg){
+  if (!idxs.length || !prSlItem()) return; const S = new Set(idxs), first = idxs[0];
+  prSlDo(it=>{
+    const gone = it.slides.filter((_,i)=>S.has(i)); it.slides = it.slides.filter((_,i)=>!S.has(i));
+    if (it.sbg) { gone.forEach(g=>{ if (!it.slides.some(x=>x.key===g.key)) delete it.sbg[g.key]; }); if (!Object.keys(it.sbg).length) delete it.sbg; }
+    return it.slides.length ? [Math.min(first, it.slides.length-1)] : [];
+  });
+  prToast(msg || (idxs.length===1 ? '已删除第 '+(idxs[0]+1)+' 页' : '已删除 '+idxs.length+' 页'), true);
+}
+function prSlDelSel(){ const s = prSlSel(); if (!s.length) { prToast('先点选要删除的幻灯片'); return; } prSlDelete(s); }
+function prSlDup(){
+  const s = prSlSel(); if (!s.length) { prToast('先点选要创建副本的幻灯片'); return; }
+  prSlDo(it=>{ const cl = s.map(i=>prSlClone(it, it.slides[i])), at = s[s.length-1]+1; it.slides.splice(at, 0, ...cl); return cl.map((_,k)=>at+k); });
+  prToast('已创建 '+s.length+' 个副本', true);
+}
+const PR_SLCLIP = 'hymnSlClip';
+function prSlClipGet(){ if (pres.sclip && pres.sclip.length) return pres.sclip; try{ const a = JSON.parse(localStorage.getItem(PR_SLCLIP)||'[]'); return Array.isArray(a) ? a : []; }catch{ return []; } }
+function prSlCopy(cut){
+  const it = prSlItem(), s = prSlSel(); if (!it || !s.length) { prToast('先点选要复制的幻灯片'); return; }
+  pres.sclip = s.map(i=>{ const x = pres.slides[i]; return { label:x.label, text:x.text, ref:x.ref, bg:(it.sbg && it.sbg[x.key]) || null }; });
+  try{ localStorage.setItem(PR_SLCLIP, JSON.stringify(pres.sclip)); }catch{}
+  if (cut) prSlDelete(s, '已剪切 '+s.length+' 页，按 '+PR_MOD+'V 粘贴'); else prToast('已复制 '+s.length+' 页，按 '+PR_MOD+'V 粘贴');
+}
+function prSlPaste(){
+  if (!prSlItem()) return; const clip = prSlClipGet(); if (!clip.length) { prToast('剪贴板是空的：先点选幻灯片，按 '+PR_MOD+'C 复制'); return; }
+  const s = prSlSel(), at = s.length ? s[s.length-1]+1 : pres.slides.length;
+  prSlDo(it=>{
+    const cl = clip.map(c=>{ const k = prNewKey(), o = { label:c.label||'自定义', text:c.text||'', key:k }; if (c.ref) o.ref = c.ref; if (c.bg) (it.sbg = it.sbg || {})[k] = c.bg; return o; });
+    it.slides.splice(Math.min(at, it.slides.length), 0, ...cl); return cl.map((_,k)=>at+k);
+  });
+  prToast('已粘贴 '+clip.length+' 页', true);
+}
+function prSlReset(){
+  const it = prSlItem(); if (!it || !Array.isArray(it.slides)) return;
+  const cur0 = pres.cur; prDo(()=>{ delete it.slides; }); pres.cur = Math.min(cur0, pres.slides.length-1); prSlSetSel([]); presRender(); presPush();
+  prToast('已还原为按分段自动分页', true);
+}
+
+/* 编辑 / 新增（弹窗） */
+const prEd = document.createElement('div'); prEd.id = 'prSlEd'; prEd.hidden = true;
+prEd.innerHTML = '<div class="sled-box"><div class="sled-h" id="sledTitle"></div><label>段落名<input id="sledLabel" list="sledLabels" maxlength="24" autocomplete="off" spellcheck="false"></label><datalist id="sledLabels"></datalist>'
+  + '<label>内容（一行一句，可以空着做空白页）<textarea id="sledText" rows="8" spellcheck="false"></textarea></label>'
+  + '<div class="sled-a"><span class="hint">Ctrl+Enter 保存 · Esc 取消</span><button type="button" id="sledCancel">取消</button><button type="button" class="pri" id="sledOk">保存</button></div></div>';
+document.body.appendChild(prEd);
+let prEdSave = null;
+function prEdOpen(title, label, text, onSave){
+  $('sledTitle').textContent = title; $('sledLabel').value = label; $('sledText').value = text; prEdSave = onSave;
+  const labs = [...new Set(pres.slides.map(s=>s.label))]; $('sledLabels').innerHTML = labs.map(l=>`<option value="${annEsc(l)}">`).join('');
+  prEd.hidden = false; const t = $('sledText'); t.focus(); t.setSelectionRange(t.value.length, t.value.length);
+}
+function prEdClose(){ prEd.hidden = true; prEdSave = null; prSlEl.focus({ preventScroll:true }); }
+function prEdOk(){ const f = prEdSave, lab = $('sledLabel').value.trim() || '自定义', txt = $('sledText').value.replace(/\s+$/,''); prEd.hidden = true; prEdSave = null; if (f) f(lab, txt); prSlEl.focus({ preventScroll:true }); }
+$('sledOk').addEventListener('click', prEdOk); $('sledCancel').addEventListener('click', prEdClose);
+prEd.addEventListener('mousedown', e=>{ if (e.target===prEd) prEdClose(); });
+prEd.addEventListener('keydown', e=>{
+  e.stopPropagation();
+  if (e.key==='Escape') { e.preventDefault(); prEdClose(); }
+  else if (e.key==='Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); prEdOk(); }
+});
+function prSlEdit(){
+  const it = prSlItem(), s = prSlSel(); if (!it) return; if (s.length!==1) { prToast('编辑一次只能选一页'); return; }
+  const i = s[0], x = pres.slides[i];
+  prEdOpen('编辑第 '+(i+1)+' 页', x.label, x.text, (lab, txt)=>{ if (lab===x.label && txt===x.text) return; prSlDo(it=>{ const t = it.slides[i]; t.label = lab; t.text = txt; return [i]; }); });
+}
+function prSlAdd(){
+  if (!prSlItem()) { prToast('PPT 的幻灯片请在 PPT 里改'); return; }
+  const s = prSlSel(), at = s.length ? s[s.length-1]+1 : pres.slides.length, ref = pres.slides[at-1] || pres.slides[0];
+  prEdOpen('新增幻灯片（插在第 '+(at+1)+' 页位置）', ref ? ref.label : '自定义', '', (lab, txt)=>{
+    prSlDo(it=>{ it.slides.splice(Math.min(at, it.slides.length), 0, { label:lab, text:txt, key:prNewKey() }); return [Math.min(at, it.slides.length-1)]; });
+  });
+}
+
+/* 点选：Ctrl/⌘ 点选，Shift 连选；普通点击 = 选中并放映 */
+prSlEl.addEventListener('click', e=>{
+  const c = e.target.closest('.pr-card');
+  if (!c) { if (e.target===prSlEl) { prSlSetSel([]); prSlPaint(); } return; }
+  const i = +c.dataset.i; prSlSel();
+  if (e.shiftKey) { e.stopImmediatePropagation(); const a = Math.min(pres.sanc||0, i), b = Math.max(pres.sanc||0, i); prSlSetSel(Array.from({ length:b-a+1 }, (_,k)=>a+k), pres.sanc||0); prSlPaint(); return; }
+  if (e.ctrlKey || e.metaKey) { e.stopImmediatePropagation(); if (pres.ssel.has(i)) pres.ssel.delete(i); else pres.ssel.add(i); pres.sanc = i; prSlPaint(); return; }
+  prSlSetSel([i], i);
+  if (e.detail >= 2 && prSlItem()) setTimeout(()=>{ prSlPaint(); prSlEdit(); }, 0);   // 双击：点第一下就会重绘，浏览器不再发 dblclick，所以用点击次数判断
+}, true);
+prSlEl.addEventListener('dblclick', e=>{ const el = e.target.closest ? e.target : document.elementFromPoint(e.clientX, e.clientY), c = (el && el.closest && el.closest('.pr-card')) || (document.elementFromPoint(e.clientX, e.clientY) || document.body).closest('.pr-card'); if (!c || !prSlItem()) return; prSlSetSel([+c.dataset.i], +c.dataset.i); prSlPaint(); prSlEdit(); });
+
+/* 键盘（焦点在幻灯片区时） */
+prSlEl.addEventListener('keydown', e=>{
+  const mod = e.ctrlKey || e.metaKey, k = e.key.toLowerCase(); let h = true;
+  if (mod && k==='a') { prSlSetSel(pres.slides.map((_,i)=>i), 0); prSlPaint(); }
+  else if (!prSlItem()) h = false;
+  else if (mod && k==='c') prSlCopy(false);
+  else if (mod && k==='x') prSlCopy(true);
+  else if (mod && k==='v') prSlPaste();
+  else if (mod && k==='d') prSlDup();
+  else if (mod && k==='z') { if (e.shiftKey) prRedoDo(); else prUndoDo(); }
+  else if (mod && k==='y') prRedoDo();
+  else if (e.key==='Delete') prSlDelSel();
+  else if (e.key==='F2') prSlEdit();
+  else if (e.altKey && (e.key==='ArrowLeft' || e.key==='ArrowUp')) prSlStep(-1);
+  else if (e.altKey && (e.key==='ArrowRight' || e.key==='ArrowDown')) prSlStep(1);
+  else h = false;
+  if (h) { e.preventDefault(); e.stopPropagation(); }
+});
+
+/* 拖动排序：抓任意一页；多选时一起拖；Alt/Ctrl 放下 = 复制 */
+function prSlMarks(){ prSlEl.querySelectorAll('.sdrop-b,.sdrop-a').forEach(x=>x.classList.remove('sdrop-b','sdrop-a')); }
+prSlEl.addEventListener('dragstart', e=>{
+  const c = e.target.closest('.pr-card'); if (!c || !prSlItem()) return; const i = +c.dataset.i; const s = prSlSel();
+  if (!s.includes(i)) { prSlSetSel([i], i); prSlPaint(); }
+  prSlDrag = prSlSel(); e.dataTransfer.setData('application/x-hymn-slide', prSlDrag.join(',')); e.dataTransfer.setData('text/plain', pres.slides[i].text); e.dataTransfer.effectAllowed = 'copyMove';
+  setTimeout(()=>{ prSlEl.querySelectorAll('.pr-card.ssel').forEach(x=>x.classList.add('sdragging')); }, 0);
+});
+prSlEl.addEventListener('dragover', e=>{
+  if (!prSlDrag) return; e.preventDefault(); e.dataTransfer.dropEffect = (e.altKey || e.ctrlKey || e.metaKey) ? 'copy' : 'move'; prSlMarks();
+  const cards = [...prSlEl.querySelectorAll('.pr-card')]; if (!cards.length) { prSlDropPos = 0; return; }
+  let c = e.target.closest('.pr-card');
+  if (!c) {   // 落在空白或段落标题上：取离鼠标最近的一页
+    let best = 1e9; cards.forEach(x=>{ const r = x.getBoundingClientRect(), dx = Math.max(r.left-e.clientX, 0, e.clientX-r.right), dy = Math.max(r.top-e.clientY, 0, e.clientY-r.bottom), d = dx*dx+dy*dy; if (d < best) { best = d; c = x; } });
+  }
+  const r = c.getBoundingClientRect(), before = e.clientX < r.left + r.width/2; prSlDropPos = +c.dataset.i + (before ? 0 : 1); c.classList.add(before ? 'sdrop-b' : 'sdrop-a');
+});
+prSlEl.addEventListener('dragleave', e=>{ if (!prSlEl.contains(e.relatedTarget)) prSlMarks(); });
+prSlEl.addEventListener('drop', e=>{
+  if (!prSlDrag) return; e.preventDefault(); prSlMarks();
+  const sel = prSlDrag, pos = prSlDropPos; prSlDrag = null; prSlEl.querySelectorAll('.sdragging').forEach(x=>x.classList.remove('sdragging'));
+  if (pos < 0) return;
+  if (e.altKey || e.ctrlKey || e.metaKey) {
+    prSlDo(it=>{ const cl = sel.map(i=>prSlClone(it, it.slides[i])); it.slides.splice(pos, 0, ...cl); return cl.map((_,k)=>pos+k); });
+    prToast('已复制 '+sel.length+' 页到这里', true);
+  } else prSlApplyPerm(prSlPermMove(pres.slides.length, sel, pos), sel);
+});
+prSlEl.addEventListener('dragend', ()=>{ prSlDrag = null; prSlMarks(); prSlEl.querySelectorAll('.sdragging').forEach(x=>x.classList.remove('sdragging')); });
+
+/* 工具条 + 右键菜单 */
+$('slAdd').addEventListener('click', prSlAdd); $('slEdit').addEventListener('click', prSlEdit); $('slDup').addEventListener('click', prSlDup);
+$('slDel').addEventListener('click', prSlDelSel); $('slReset').addEventListener('click', prSlReset);
+const prSlCtx = document.createElement('div'); prSlCtx.id = 'prSlCtx'; prSlCtx.className = 'pr-ctxm'; prSlCtx.hidden = true; document.body.appendChild(prSlCtx);
+const prSlCtxClose = ()=>{ prSlCtx.hidden = true; };
+function prSlCtxOpen(x, y){
+  const it = prSlItem(), n = prSlSel().length, nm = n>1 ? '（'+n+' 页）' : '', can = prSlClipGet().length>0;
+  const mi = (a, t, key, ok=true)=>`<div class="ctx-i${ok ? '' : ' dis'}" data-a="${a}"><span>${t}</span><kbd>${key||''}</kbd></div>`;
+  prSlCtx.innerHTML = mi('edit','编辑…','F2 / 双击', n===1) + mi('add','在后面新增一页…','') + '<div class="ctx-sep"></div>'
+    + mi('copy','复制'+nm, PR_MOD+'C', n>0) + mi('cut','剪切'+nm, PR_MOD+'X', n>0) + mi('paste','粘贴', PR_MOD+'V', can) + mi('dup','创建副本'+nm, PR_MOD+'D', n>0) + '<div class="ctx-sep"></div>'
+    + mi('left','前移一页','Alt+←', n>0) + mi('right','后移一页','Alt+→', n>0) + mi('first','移到最前','', n>0) + mi('last','移到最后','', n>0) + '<div class="ctx-sep"></div>'
+    + mi('all','全选', PR_MOD+'A') + mi('del','删除'+nm,'Delete', n>0) + (Array.isArray(it.slides) ? mi('reset','还原为自动分页','') : '');
+  prSlCtx.hidden = false; const w = prSlCtx.offsetWidth, h = prSlCtx.offsetHeight;
+  prSlCtx.style.left = Math.max(4, Math.min(x, innerWidth-w-4))+'px'; prSlCtx.style.top = Math.max(4, Math.min(y, innerHeight-h-4))+'px';
+}
+prSlEl.addEventListener('contextmenu', e=>{
+  if (!prSlItem()) return; e.preventDefault(); prSlSel();
+  const c = e.target.closest('.pr-card'); if (c) { const i = +c.dataset.i; if (!pres.ssel.has(i)) { prSlSetSel([i], i); prSlPaint(); } }
+  prSlEl.focus({ preventScroll:true }); prSlCtxOpen(e.clientX, e.clientY);
+});
+prSlCtx.addEventListener('click', e=>{
+  const b = e.target.closest('.ctx-i'); if (!b || b.classList.contains('dis')) return; const a = b.dataset.a, s = prSlSel(); prSlCtxClose(); prSlEl.focus({ preventScroll:true });
+  if (a==='edit') prSlEdit(); else if (a==='add') prSlAdd(); else if (a==='copy') prSlCopy(false); else if (a==='cut') prSlCopy(true); else if (a==='paste') prSlPaste();
+  else if (a==='dup') prSlDup(); else if (a==='left') prSlStep(-1); else if (a==='right') prSlStep(1); else if (a==='del') prSlDelSel(); else if (a==='reset') prSlReset();
+  else if (a==='all') { prSlSetSel(pres.slides.map((_,i)=>i), 0); prSlPaint(); }
+  else if (a==='first') prSlApplyPerm(prSlPermMove(pres.slides.length, s, 0), s);
+  else if (a==='last') prSlApplyPerm(prSlPermMove(pres.slides.length, s, pres.slides.length), s);
+});
+document.addEventListener('mousedown', e=>{ if (!prSlCtx.hidden && !prSlCtx.contains(e.target)) prSlCtxClose(); }, true);
+document.addEventListener('keydown', e=>{ if (e.key==='Escape' && !prSlCtx.hidden) { e.preventDefault(); e.stopPropagation(); prSlCtxClose(); } }, true);
+window.addEventListener('blur', prSlCtxClose); window.addEventListener('resize', prSlCtxClose);
 
 /* ---- 键盘 / 按钮：观众屏、舞台屏各自开关；上下首 ---- */
 const presAudienceOn = ()=>!!(pres.out && castActive());
@@ -5106,6 +5377,7 @@ renderBookSel();
 document.querySelectorAll('#srcSeg button').forEach(b=>b.addEventListener('click', ()=>{
   if (b.dataset.src === source) return;
   source = b.dataset.src; applySource(); saveSettings();
+  if (source === 'hymn') ensureBookIds();
   searchGen++; latestResults = []; queue.length = 0; setProgress(false); $('searchBtn').disabled = false;
   $('results').innerHTML = idleHint('已切换到' + ({all:'全部来源',azm:'赞美网',lib:'诗歌库',hymn:'诗歌本',book:'歌本分类'}[source]) + '接口，输入歌名开始搜索。');
   $('resultTitle').textContent = '搜索结果'; $('exportBtn').disabled = true; $('moreWrap').hidden = true; $('rawBox').hidden = true;
@@ -5726,6 +5998,7 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) navigat
   }catch{}
   if (source === 'fav') { showFavs($('keyword').value.trim()); return; }
   if (source !== 'hymn') { showStatus(({all:'三个来源',lib:'诗歌库',azm:'赞美网'}[source])+'已就绪，输入关键词开始搜索。'); return; }
+  ensureBookIds().then(()=>{ try{ renderBookSel(); }catch{} });
   if (!hasCrypto()) { showStatus('CryptoJS 未加载成功，请检查网络或刷新页面。'); updateDevInfo(); return; }
   try { const saved = localStorage.getItem(KEY_SIGN_ID) || ''; if (saved) { deviceSignId = saved; updateDevInfo(); } } catch {}
   showStatus('正在注册设备签名…');
