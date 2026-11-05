@@ -64,6 +64,7 @@ input:focus,select:focus{border-color:var(--blue);box-shadow:0 0 0 3px #2563eb22
 .bp-chips button{flex:none;background:var(--card);color:var(--ink);border:1px solid var(--line);padding:5px 13px;font-size:13.5px;font-weight:600;border-radius:999px;white-space:nowrap}
 .bp-chips button:hover{background:var(--soft)}
 .bp-chips button.on{background:linear-gradient(135deg,#3b82f6,var(--blue-d));color:#fff;border-color:transparent}
+.bp-chips button small{margin-left:5px;font-size:10.5px;font-weight:500;opacity:.6}
 .seg{display:flex;overflow-x:auto;scrollbar-width:none;gap:10px;margin-top:12px;padding:2px 2px 6px;max-width:100%}
 .seg::-webkit-scrollbar{display:none}
 .seg button{display:flex;align-items:center;gap:7px;flex:none;background:var(--card);color:var(--ink);border:1px solid var(--line);padding:8px 16px;font-size:15px;font-weight:600;border-radius:999px;white-space:nowrap;box-shadow:0 2px 8px #2563eb0f}
@@ -1346,6 +1347,9 @@ let source='all';
 /* ---- 诗歌本：检索前选择歌本 ---- */
 const BOOKS_KEY='HymnBooks.v1';
 let FILE_BOOKS={};   // 来自同目录 books.json：{ bookid: bname }
+// books.json 读取失败（离线、file:// 打开、文件缺失）时的保底：保证常用歌本（含两本灵栖清泉）仍能按 ID 精确检索；books.json 里的同 ID 条目优先
+const BOOK_FALLBACK={172:'灵栖清泉',218:'灵栖清泉2',138:'挖晒谱',223:'和弦简谱',47:'赞美之泉',77:'生命诗歌',12:'迦南诗选',2:'补充本'};
+let BOOKFILE_P=Promise.resolve();   // books.json 的加载进度：搜索前先等它，避免首次搜索时歌本 ID 还没载入
 async function loadBookFile(){
   try{
     const r=await fetch('books.json',{cache:'no-cache'}); if(!r.ok) return;
@@ -1354,7 +1358,7 @@ async function loadBookFile(){
     FILE_BOOKS=m; renderBookSel();
   }catch{}
 }
-function loadBooks(){ let o={}; try{ const t=JSON.parse(localStorage.getItem(BOOKS_KEY)||'{}'); if(t&&typeof t==='object') o=t; }catch{} const sv={}; try{ (serverBooks.list||[]).forEach(b=>{ if(b&&b.id!=null&&b.name) sv[b.id]=String(b.name).replace(/[《》]/g,'').trim(); }); }catch{} return Object.assign({},o,sv,FILE_BOOKS); }
+function loadBooks(){ let o={}; try{ const t=JSON.parse(localStorage.getItem(BOOKS_KEY)||'{}'); if(t&&typeof t==='object') o=t; }catch{} const sv={}; try{ (serverBooks.list||[]).forEach(b=>{ if(b&&b.id!=null&&b.name) sv[b.id]=String(b.name).replace(/[《》]/g,'').trim(); }); }catch{} return Object.assign({},BOOK_FALLBACK,o,sv,FILE_BOOKS); }
 function learnBooks(rows){
   const m=loadBooks(); let ch=false;
   (rows||[]).forEach(r=>{
@@ -1363,12 +1367,12 @@ function learnBooks(rows){
   });
   if(ch){ try{ localStorage.setItem(BOOKS_KEY,JSON.stringify(m)); }catch{} renderBookSel(); }
 }
-const COMMON_BOOKS=['灵栖清泉','挖晒谱','和弦简谱','赞美之泉','生命诗歌','迦南诗选','赞美诗(新编)','补充本'];
+const COMMON_BOOKS=['灵栖清泉','灵栖清泉2','挖晒谱','和弦简谱','赞美之泉','生命诗歌','迦南诗选','赞美诗(新编)','补充本'];
 const normBook=x=>String(x||'').replace(/[《》\s()（）]/g,'').replace(/硒/g,'晒').toLowerCase();
-const bookMatch=(a,b)=>{ a=normBook(a); b=normBook(b); return !!a&&!!b&&(a.includes(b)||b.includes(a)); };
+const bookMatch=(a,b,strict)=>{ a=normBook(a); b=normBook(b); if(!a||!b) return false; if(a===b) return true; return strict?false:(a.includes(b)||b.includes(a)); };   // strict=true：只认完全相同的歌本名
 function selBookName(){ return $('bookName').value.trim(); }
 /* 歌本名→ID 的映射一部分来自后台歌本列表（serverBooks）；诗歌本模式下它可能还没加载，这里按需补载（失败不影响搜索） */
-async function ensureBookIds(){ try{ await fetchServerBooks(); }catch{} }
+async function ensureBookIds(){ try{ await BOOKFILE_P; }catch{} try{ await fetchServerBooks(); }catch{} }
 function bookIdByName(nm){
   if(!nm) return null;
   if(/^\d+$/.test(nm.trim())) return Number(nm); const m=loadBooks();
@@ -1392,29 +1396,55 @@ async function hymnGet(url){
   }
   return last;
 }
+/* 当前选中的歌本 ID：优先用「点选」时记下的 ID（同名/近名歌本靠它区分），否则按输入的名字精确匹配 */
+let selBookId=null;
+function curBookId(){ const nm=selBookName(); if(!nm) return null; if(selBookId!=null) return selBookId; return bookIdByName(nm); }
 function effBookId(){
   const nm=selBookName();
-  if(nm) return bookIdByName(nm)??0;
+  if(nm) return curBookId()??0;
   return Number.parseInt($('bookId').value||'0',10)||0;
 }
+function isKnownBook(nm){ const k=normBook(nm); if(!k) return false; return Object.values(loadBooks()).some(n=>normBook(n)===k)||COMMON_BOOKS.some(n=>normBook(n)===k); }
 function filterByBook(rows,force){
-  const nm=selBookName(); if(!nm||(!force&&bookIdByName(nm)!=null)) return rows;
-  return rows.filter(r=>bookMatch(r.bookName||r.songbookName||r.mSongbook||r.songbook,nm));
+  const nm=selBookName(); if(!nm||(!force&&curBookId()!=null)) return rows;
+  const strict=isKnownBook(nm);   // 已知的完整歌本名只做精确匹配，避免「灵栖清泉」把「灵栖清泉2」的歌也带进来
+  return rows.filter(r=>bookMatch(r.bookName||r.songbookName||r.mSongbook||r.songbook,nm,strict));
 }
-function chipNames(){
-  const seen=new Set();
-  return [...COMMON_BOOKS,...loadCustom(),...loadNames()].filter(n=>{ const k=normBook(n); if(!k||seen.has(k)) return false; seen.add(k); return true; }).slice(0,30);
+function idByNameIn(m,nm){ const k=normBook(nm); const ex=Object.keys(m).find(id=>normBook(m[id])===k); return ex!=null?Number(ex):null; }
+/* 歌本条目 {n:名称,id:ID}：常用/自定义/出现过的名字在前，其后是 books.json 与后台的全部歌本。
+   去重按 ID 而不是按名字，所以名字相同或相近的两本（如 灵栖清泉 / 灵栖清泉2）都能单独选中 */
+function bookEntries(all){
+  const m=loadBooks(), out=[], seenId=new Set(), seenNm=new Set();
+  const add=(n,id)=>{
+    n=String(n||'').trim(); const k=normBook(n); if(!k) return;
+    if(id==null){
+      if(seenNm.has(k)) return;
+      const ex=idByNameIn(m,n);
+      seenNm.add(k);
+      if(ex!=null){ if(seenId.has(ex)) return; seenId.add(ex); out.push({n,id:ex}); }
+      else out.push({n,id:null});
+      return;
+    }
+    if(seenId.has(id)) return;
+    seenId.add(id); seenNm.add(k); out.push({n,id});
+  };
+  [...COMMON_BOOKS,...loadCustom(),...loadNames()].forEach(n=>add(n,null));
+  if(all) Object.keys(m).forEach(id=>add(m[id],Number(id)));
+  return all?out:out.slice(0,30);
 }
 function renderBookSel(){
-  const nm=selBookName();
-  const names=chipNames();
-  $('bookChips').innerHTML=names.map(n=>`<button type="button" data-n="${escapeHtml(n)}" class="${nm&&normBook(nm)===normBook(n)?'on':''}">${escapeHtml(n)}</button>`).join('');
+  const nm=selBookName(), cid=curBookId();
+  $('bookChips').innerHTML=bookEntries(false).map(e=>{
+    const on=nm&&(e.id!=null&&cid!=null?e.id===cid:normBook(nm)===normBook(e.n));
+    return `<button type="button" data-n="${escapeHtml(e.n)}" data-id="${e.id==null?'':e.id}" class="${on?'on':''}">${escapeHtml(e.n)}${e.id!=null?`<small>${e.id}</small>`:''}</button>`;
+  }).join('');
   $('bookClr').hidden=!nm;
 }
-function setBook(name){
+function setBook(name,id){
+  selBookId=(name&&id!=null&&id!=='')?Number(id):null;
   $('bookName').value=name||''; renderBookSel();
   if($('keyword').value.trim()) search();
-  else showStatus(name?`已选择歌本「${name}」，输入关键词后搜索。`:'已取消歌本限制。');
+  else showStatus(name?`已选择歌本「${name}」${selBookId!=null?`（ID ${selBookId}）`:''}，输入关键词后搜索。`:'已取消歌本限制。');
 }
 function applySource(){
   $('bookPick').hidden = source!=='hymn';
@@ -2170,7 +2200,7 @@ async function search(){
       : (selBookName() && rawN ? `在「${selBookName()}」里没有找到「${keyword}」（接口返回的 ${rawN} 条都属于其他歌本）。可换更具体的歌名，或点歌本框右侧 ✕ 取消歌本限制。`
       : selBookName() ? `在「${selBookName()}」里没有找到「${keyword}」，可换个关键词，或点歌本框右侧 ✕ 取消歌本限制。`
       : '没有找到结果，可尝试更短的歌名关键词。'));
-    if (latestResults.length && selBookName() && (byName || bookIdByName(selBookName())==null) && rawN>=takeSize()) showStatus(`已在 ${rawN} 条中按歌本名「${selBookName()}」过滤，结果可能不全；可输入更具体的歌名。`);
+    if (latestResults.length && selBookName() && (byName || curBookId()==null) && rawN>=takeSize()) showStatus(`已在 ${rawN} 条中按歌本名「${selBookName()}」过滤，结果可能不全；可输入更具体的歌名。`);
   } catch (err) {
     if (gen !== searchGen) return;
     latestResults = [];
@@ -5316,7 +5346,7 @@ $('bgFile').addEventListener('change', e=>{
 $('settingsBtn').addEventListener('click', ()=>{ const p=$('settingsPanel'); p.hidden=!p.hidden; });
 $('sizeSel').addEventListener('change', ()=>{ applySize(); saveSettings(); });
 ['apiBase','imageApiBase','bookId','loginName','authToken','azmBase','libUrl','libKey'].forEach(k=>$(k).addEventListener('change', saveSettings));
-$('bookChips').addEventListener('click',e=>{ const b=e.target.closest('button[data-n]'); if(!b) return; setBook(selBookName()&&normBook(selBookName())===normBook(b.dataset.n)?'':b.dataset.n); });
+$('bookChips').addEventListener('click',e=>{ const b=e.target.closest('button[data-n]'); if(!b) return; const id=b.dataset.id===''||b.dataset.id==null?null:Number(b.dataset.id); setBook(b.classList.contains('on')?'':b.dataset.n,id); });
 $('bookClr').addEventListener('click',()=>{ setBook(''); $('bookName').focus(); showSug(); });
 const CUSTOM_KEY='HymnBookCustom.v1';
 function loadCustom(){ try{ const a=JSON.parse(localStorage.getItem(CUSTOM_KEY)||'[]'); return Array.isArray(a)?a:[]; }catch{ return []; } }
@@ -5336,27 +5366,25 @@ function learnBookNames(rows){   // 结果里出现过的歌本名（不要求�
   });
   if(ch){ try{ localStorage.setItem(NAMES_KEY,JSON.stringify(have.slice(-100))); }catch{} renderBookSel(); }
 }
-function allBookNames(){
-  const names=[...COMMON_BOOKS,...loadCustom(),...loadNames()];
-  Object.values(loadBooks()).forEach(n=>names.push(n));
-  const seen=new Set();
-  return names.filter(n=>{ const k=normBook(n); if(!k||seen.has(k)) return false; seen.add(k); return true; });
-}
+function allBookNames(){ return bookEntries(true).map(e=>e.n); }
 let sugIdx=-1, sugList=[];
 function showSug(){
   const box=$('bookSug'), q=selBookName();
-  const nq=normBook(q);
-  const all=allBookNames();
-  sugList=[...all.filter(n=>nq&&normBook(n).includes(nq)),...all.filter(n=>!nq||!normBook(n).includes(nq))].slice(0,60);
+  const nq=normBook(q), qid=/^\d+$/.test(q)?Number(q):null;
+  const all=bookEntries(true);
+  const rank=e=>{ const k=normBook(e.n); if(qid!=null&&e.id===qid) return 0; if(!nq) return 9; if(k===nq) return 0; if(k.startsWith(nq)) return 1; if(k.includes(nq)) return 2; return 9; };
+  const hit=all.map((e,i)=>({e,i,r:rank(e)})).filter(x=>x.r<9).sort((a,b)=>a.r-b.r||a.i-b.i).map(x=>x.e);
+  const rest=all.filter(e=>rank(e)>=9);
+  sugList=(nq||qid!=null?hit.concat(rest):all).slice(0,60);
   sugIdx=-1;
   if(!sugList.length){ box.hidden=true; return; }
   const hl=n=>{ if(!q) return escapeHtml(n); const i=n.toLowerCase().indexOf(q.toLowerCase()); return i<0?escapeHtml(n):escapeHtml(n.slice(0,i))+'<b>'+escapeHtml(n.slice(i,i+q.length))+'</b>'+escapeHtml(n.slice(i+q.length)); };
-  box.innerHTML=sugList.map((n,k)=>`<div role="option" data-k="${k}">${hl(n)}${bookIdByName(n)!=null?`<small>ID ${bookIdByName(n)}</small>`:''}</div>`).join('');
+  box.innerHTML=sugList.map((e,k)=>`<div role="option" data-k="${k}">${hl(e.n)}${e.id!=null?`<small>ID ${e.id}</small>`:''}</div>`).join('');
   box.hidden=false;
 }
 function hideSug(){ $('bookSug').hidden=true; sugIdx=-1; }
-function pickSug(k){ const n=sugList[k]; if(n==null) return; hideSug(); setBook(n); }
-$('bookName').addEventListener('input',()=>{ renderBookSel(); showSug(); });
+function pickSug(k){ const e=sugList[k]; if(e==null) return; hideSug(); setBook(e.n,e.id); }
+$('bookName').addEventListener('input',()=>{ selBookId=null; renderBookSel(); showSug(); });
 $('bookName').addEventListener('focus',showSug);
 $('bookName').addEventListener('blur',()=>setTimeout(hideSug,150));
 $('bookSug').addEventListener('mousedown',e=>e.preventDefault());
@@ -5989,7 +6017,7 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) navigat
 (async ()=>{
   if (IS_RECV) return;   // 投屏接收端不需要初始化搜索功能
   loadSettings();
-  loadBookFile();
+  BOOKFILE_P=loadBookFile();
   syncClear();
   try{
     const qs=new URLSearchParams(location.search);
