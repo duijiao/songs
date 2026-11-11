@@ -708,6 +708,41 @@ html.recv body>*:not(#recv):not(script){display:none!important}
 .sled-box textarea{resize:vertical;min-height:140px}
 .sled-a{display:flex;gap:8px;align-items:center;justify-content:flex-end}
 .sled-a .hint{margin-right:auto;color:#8ea0bd;font-size:12px}
+
+/* ===== OBS 直播输出：?obs=1 打开时只显示歌名与字幕，背景透明 ===== */
+html.obs,html.obs body{background:transparent!important;margin:0;height:100%;overflow:hidden}
+html.obs body>*:not(#obsOut):not(script):not(style){display:none!important}
+#obsOut{display:none}
+html.obs #obsOut{display:block;position:fixed;inset:0;pointer-events:none;color:var(--c);font-family:var(--ff);font-weight:var(--fw);
+  --fs:6;--c:#fff;--bar:.55;--fw:700;--ff:system-ui,-apple-system,"PingFang SC","Microsoft YaHei","Noto Sans CJK SC",sans-serif}
+#obsSub{position:absolute;left:50%;bottom:5vh;transform:translateX(-50%);max-width:90vw;text-align:center;
+  font-size:calc(var(--fs)*1vh);line-height:1.35;padding:.3em .8em;border-radius:.25em;background:rgba(0,0,0,var(--bar));
+  text-shadow:0 .05em .15em #000c,0 0 .06em #000;opacity:0;transition:opacity .2s}
+#obsSub.on{opacity:1}
+#obsSub.pop{animation:obsIn .25s ease-out}
+#obsSub small{display:block;font-size:.6em;font-weight:500;opacity:.85;margin-top:.1em}
+#obsOut[data-pos=t] #obsSub{bottom:auto;top:5vh}
+#obsTitle{position:absolute;left:3vw;top:4vh;max-width:70vw;font-size:calc(var(--fs)*.8*1vh);line-height:1.3;padding:.3em .9em .3em .7em;
+  border-radius:.25em;border-left:.22em solid #3b82f6;background:rgba(0,0,0,var(--bar));text-shadow:0 .05em .15em #000c;
+  opacity:0;transform:translateX(-2vw);transition:opacity .45s,transform .45s}
+#obsTitle.on{opacity:1;transform:none}
+#obsOut[data-pos=t] #obsTitle{top:auto;bottom:4vh}
+#obsDbg{position:absolute;right:8px;top:6px;font:12px/1.4 system-ui,sans-serif;color:#fff;background:#000a;padding:2px 8px;border-radius:6px}
+@keyframes obsIn{from{opacity:.2}to{opacity:1}}
+@media (prefers-reduced-motion:reduce){#obsTitle,#obsSub{transition:none}#obsSub.pop{animation:none}}
+#prMenus button[data-m=obs].live::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:#ef4444;margin-right:6px;vertical-align:1px}
+.ob-st{margin-top:10px;font-size:13px;color:#8ea0bd}
+.ob-st.ok{color:#4ade80}.ob-st.bad{color:#f87171}
+
+#obsTitle{transition:opacity .5s,filter .5s;width:max-content}
+#obsTitle:not(.on){filter:blur(8px)}
+.ob-ch{display:inline-block;white-space:pre;opacity:0;animation:obCh .9s cubic-bezier(.2,.7,.2,1) both}
+@keyframes obCh{from{opacity:0;filter:blur(var(--b,10px));transform:translateY(.18em) scale(1.12)}to{opacity:1;filter:blur(0);transform:none}}
+#obsTitle #obsCred{margin-top:.2em;font-weight:500;opacity:.95}
+#obsOut>#obsCred{position:absolute;max-width:85vw;padding:.25em .8em;border-radius:.25em;background:rgba(0,0,0,var(--bar));text-shadow:0 .05em .15em #000c;opacity:0;transition:opacity .5s,filter .5s}
+#obsOut>#obsCred.on{opacity:1}
+#obsOut>#obsCred:not(.on){filter:blur(6px)}
+@media (prefers-reduced-motion:reduce){.ob-ch{animation:none;opacity:1}}
 </style>
 <script>var IDLE_SVG='<svg class="idle-ico" viewBox="0 0 48 48" fill="none" aria-hidden="true"><rect x="4" y="4" width="40" height="40" rx="11" fill="currentColor" opacity=".12"/><path d="M19 32V15l13-3v17" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><circle cx="16" cy="33" r="4" fill="currentColor"/><circle cx="29" cy="30" r="4" fill="currentColor"/></svg>';
 function ssFallback(img){ img.onerror=null; img.outerHTML=IDLE_SVG; }   // ss.png 不存在时换成内置图标
@@ -977,6 +1012,8 @@ function ssFallback(img){ img.onerror=null; img.outerHTML=IDLE_SVG; }   // ss.pn
 <div class="cast-pill" id="castAutoBar" hidden style="top:64px;bottom:auto;left:50%;right:auto;z-index:140"><span id="castAutoTxt"></span><button type="button" id="castAutoNo" style="background:#475569">取消</button></div>
 <div class="cast-pill" id="castPill" hidden><span>投屏中</span><button type="button" id="castPillStop">停止</button></div>
 <!-- 投屏接收端（仅 ?present=1 时显示） -->
+<!-- OBS 直播输出（仅 ?obs=1 时显示） -->
+<div id="obsOut" data-pos="b"><div id="obsTitle"></div><div id="obsSub"></div></div>
 <div id="recv" class="nofs" hidden>
   <img id="recvImg" alt="" referrerpolicy="no-referrer" draggable="false">
   <svg id="recvAnn" viewBox="0 0 1 1" preserveAspectRatio="none" aria-hidden="true"></svg>
@@ -1054,7 +1091,7 @@ function ssFallback(img){ img.onerror=null; img.outerHTML=IDLE_SVG; }   // ss.pn
 <div class="pres" id="pres" hidden>
   <div class="pr-top">
     <strong>歌词投屏</strong>
-    <div class="pr-menus" id="prMenus"><button type="button" data-m="style">文字样式</button><button type="button" data-m="screens">输出屏幕</button><button type="button" data-m="stage">舞台屏设置</button></div>
+    <div class="pr-menus" id="prMenus"><button type="button" data-m="style">文字样式</button><button type="button" data-m="screens">输出屏幕</button><button type="button" data-m="stage">舞台屏设置</button><button type="button" data-m="obs">OBS 直播</button></div>
     <span class="pr-chip" id="prChip">未输出</span>
     <div class="pr-acts">
       <button type="button" class="pri" id="prStart">开始输出</button>
@@ -1247,6 +1284,37 @@ function ssFallback(img){ img.onerror=null; img.outerHTML=IDLE_SVG; }   // ss.pn
   <div class="pr-acts" style="margin-top:12px"><button type="button" id="stReset">恢复默认</button></div>
   <div class="hint" style="margin-top:8px;color:#8ea0bd">这里只影响舞台屏（敬拜团队看的屏），不影响观众屏。字号是上限，歌词太长会自动缩小。上面的预览会随调整实时变化。</div>
 </div>
+<div class="pr-pane" data-pane="obs" data-menu hidden>
+  <div class="pr-form">
+    <label>输出到 OBS</label><input type="checkbox" id="obOn" style="width:auto">
+    <label>OBS 地址</label><input id="obWs" placeholder="ws://127.0.0.1:4455" autocomplete="off" spellcheck="false">
+    <label>OBS 密码</label><input id="obPw" type="password" placeholder="OBS 没设密码就留空" autocomplete="off">
+  </div>
+  <div class="pr-sec">歌名</div>
+  <div class="pr-form">
+    <label>换歌时显示</label><input type="checkbox" id="obTitle" style="width:auto" checked>
+    <label>停留秒数</label><input type="range" id="obSecs" min="0" max="30" value="8">
+  </div>
+  <div class="pr-sec">字幕（当前这一页歌词）</div>
+  <div class="pr-form">
+    <label>显示字幕</label><input type="checkbox" id="obSub" style="width:auto" checked>
+    <label>位置</label><select id="obPos"><option value="tl">左上</option><option value="tc">中上</option><option value="tr">右上</option><option value="bl">左下</option><option value="bc">中下</option><option value="br">右下</option></select>
+    <label>字号</label><input type="range" id="obSize" min="3" max="12" step="0.5" value="6">
+    <label>文字颜色</label><input type="color" id="obColor" value="#ffffff">
+    <label>底条深浅</label><input type="range" id="obBar" min="0" max="100" value="55">
+    <label>字体</label><select id="obFont"><option value="sans">黑体</option><option value="serif">宋体</option><option value="kai">楷体</option></select>
+    <label>加粗</label><input type="checkbox" id="obBold" style="width:auto" checked>
+  </div>
+  <div id="obLay"></div>
+  <div class="pr-sec">OBS 文字源（可选，不用就留空）</div>
+  <div class="pr-form">
+    <label>字幕文字源</label><input id="obSin" placeholder="OBS 里文字源的名称" autocomplete="off" spellcheck="false">
+    <label>歌名文字源</label><input id="obTin" placeholder="OBS 里文字源的名称" autocomplete="off" spellcheck="false">
+  </div>
+  <div class="pr-acts" style="margin-top:12px"><button type="button" id="obShowT">再显示一次歌名</button><button type="button" id="obCopy">复制浏览器源网址</button></div>
+  <div class="ob-st" id="obSt">未开启</div>
+  <div class="hint" style="margin-top:8px;color:#8ea0bd">用法：1) OBS →「工具 → WebSocket 服务器设置」勾选启用，端口默认 4455。2) 来源里添加「浏览器」，网址粘贴上面复制的，宽高设成直播画布大小（如 1920×1080）。3) 这里打开「输出到 OBS」，翻页就会实时出字幕，换歌自动出歌名。歌词页黑屏 / 清屏时，字幕和歌名会一起隐藏。想先看样式：在网址后加 &amp;demo=1。</div>
+</div>
   </div>
 </div>
 <div class="modal" id="prPick" style="z-index:126" hidden>
@@ -1320,6 +1388,8 @@ const GUIDE_FIRST = (()=>{
 const $ = id => document.getElementById(id);
 const IS_STAGE = new URLSearchParams(location.search).has('stage');   // 舞台屏
 const IS_RECV = new URLSearchParams(location.search).has('present');   // 投屏接收端：只显示歌谱
+const IS_OBS = new URLSearchParams(location.search).has('obs');   // OBS 浏览器源：只显示歌名与字幕
+if (IS_OBS) document.documentElement.classList.add('obs');
 if (IS_RECV) document.documentElement.classList.add('recv');
 let latestResults = [];
 let currentLyricsText = '', lyricsRow = null;
@@ -3180,10 +3250,10 @@ function presSheetGo(d){ const it = pres.list[pres.sel], n = it && it.sheets ? i
 function presPush(){
   if (pres._ks!==pres.sel) { pres._ks = pres.sel; pres.si = 0; }
   const it0 = pres.list[pres.sel];
-  if (pres.mode==='sheet' && it0 && it0.sheets && it0.sheets.length) { presSheetUI(); presPushSheet(it0); return; }
+  if (pres.mode==='sheet' && it0 && it0.sheets && it0.sheets.length) { try{ obsPublish(Object.assign(presState(), { text:'', ref:'' })); }catch{} presSheetUI(); presPushSheet(it0); return; }
   pres.mode = 'lyric'; { const pv=$('prSheetPv'); if (pv) pv.hidden = true; } presSheetUI();
   if (pres.out && castActive()) castSend({ t:'black', on:cast.black });
-  const st = presState(); if (pres.view) pres.view.apply(st); if (pres.stageView && prStageVisible()) pres.stageView.apply(st);
+  const st = presState(); try{ obsPublish(st); }catch{} if (pres.view) pres.view.apply(st); if (pres.stageView && prStageVisible()) pres.stageView.apply(st);
   if (pres.out && castActive()) castSend({ t:'lyric', st });
   if (pres.stage && !pres.stage.closed) { try{ pres.stage.postMessage({ t:'lyric', st }, '*'); }catch{} }
   const s = pres.slides[pres.cur];
@@ -4233,8 +4303,8 @@ async function presOpenStage(){
   }
 }
 /* ---- 顶部菜单：文字样式 / 输出屏幕 / 舞台屏设置（下拉面板，点面板外或按 Esc 收起） ---- */
-const PR_MENU_TT = { style:'文字样式（观众屏）', screens:'输出屏幕', stage:'舞台屏设置（敬拜团队看的屏）' };
-const PR_UNIT = { prSize:'%', stSplit:'%', stLh:'%', prShAmt:'%', prLh:'%', prFade:' ms' };
+const PR_MENU_TT = { style:'文字样式（观众屏）', screens:'输出屏幕', stage:'舞台屏设置（敬拜团队看的屏）', obs:'OBS 直播（歌名 + 字幕）' };
+const PR_UNIT = { obSecs:' 秒', obSize:'%', obBar:'%', prSize:'%', stSplit:'%', stLh:'%', prShAmt:'%', prLh:'%', prFade:' ms' };
 function prPopVals(){
   $('prPop').querySelectorAll('input[type=range]').forEach(r=>{
     const lab = r.previousElementSibling; if (!lab || lab.tagName!=='LABEL') return;
@@ -5985,11 +6055,11 @@ document.addEventListener('keydown', e=>{
 }, true);
 window.addEventListener('resize', placeGuide);
 ['wheel','touchmove'].forEach(ev=>$('guide').addEventListener(ev, e=>{ if (!e.target.closest('.gd-card')) e.preventDefault(); }, { passive:false }));
-if (GUIDE_FIRST && !IS_RECV && !new URLSearchParams(location.search).has('lyric')) setTimeout(startGuide, 900);
+if (GUIDE_FIRST && !IS_RECV && !IS_OBS && !new URLSearchParams(location.search).has('lyric')) setTimeout(startGuide, 900);
 
 /* 下次打开自动进入歌词投屏：浏览器要求弹出窗口由点击触发，先尝试直接开，被拦截就等你点一下页面任意位置 */
 (function(){
-  if (lsGet(CAST_AUTO_KEY)!=='1' || IS_RECV) return;
+  if (lsGet(CAST_AUTO_KEY)!=='1' || IS_RECV || IS_OBS) return;
   const bar = $('castAutoBar'), evs = ['pointerdown','keydown'];
   const stopWait = ()=>{ bar.hidden = true; evs.forEach(ev=>document.removeEventListener(ev, onTap, true)); };
   const run = ()=>{
@@ -6010,12 +6080,216 @@ if (GUIDE_FIRST && !IS_RECV && !new URLSearchParams(location.search).has('lyric'
   }, 800);
 })();
 
+
+/* ============== OBS 直播：歌名 + 实时字幕 ==============
+   主控端（这个页面）每次翻页 / 换歌 / 黑屏，都会把当前状态发给 OBS：
+   · 浏览器源（网址带 ?obs=1）：通过 OBS WebSocket 的自定义事件收到，也可走同浏览器的 BroadcastChannel
+   · 文字源（可选）：直接用 SetInputSettings 改 OBS 里文字源的内容 */
+const OBS_KEY = 'hymnObsSet';
+const OBS_DEF = { on:false, ws:'ws://127.0.0.1:4455', pw:'', title:true, secs:8, sub:true, pos:'b', size:6, color:'#ffffff', bar:55, font:'sans', bold:true, sin:'', tin:'', sAnchor:'bc', sFf:'', sDx:0, sDy:0, tAnim:'blur', tBlur:10, tStep:80, tFont:'sans', tFf:'', tSize:4.8, tColor:'#ffffff', tAnchor:'tl', tDx:0, tDy:0, cOn:true, cKeep:true, cFollow:true, cL1:'演唱：', cV1:'', cL2:'歌词制作：', cV2:'', cFont:'sans', cFf:'', cSize:3.2, cColor:'#dbe4f3', cAnchor:'bl', cDx:0, cDy:0, blurSrc:'', blurFlt:'' };
+const obsS = Object.assign({}, OBS_DEF);
+try { Object.assign(obsS, JSON.parse(localStorage.getItem(OBS_KEY)||'{}')); } catch {}
+let obsWs = null, obsReady = false, obsTimer = 0, obsLast = null, obsLastSt = null, obsTT = 0, obsLastTitle = '', obsMsgId = 0, obsTxtTT = 0, obsTxtClr = 0, obsFatal = false;
+const obsBC = ('BroadcastChannel' in window) ? new BroadcastChannel('hymnObs') : null;
+
+async function obsSha(str){
+  if (window.crypto && crypto.subtle) { const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str)); return btoa(String.fromCharCode(...new Uint8Array(b))); }
+  if (window.CryptoJS) return CryptoJS.SHA256(str).toString(CryptoJS.enc.Base64);
+  throw new Error('no sha256');
+}
+async function obsAuth(pw, salt, challenge){ return obsSha((await obsSha(pw + salt)) + challenge); }
+const obsFam = { sans:'system-ui,-apple-system,"PingFang SC","Microsoft YaHei","Noto Sans CJK SC",sans-serif', serif:'"Songti SC","SimSun","Noto Serif CJK SC",serif', kai:'"Kaiti SC","KaiTi","STKaiti","Noto Serif CJK SC",serif' };
+
+function obsStatus(msg, tone){ const el = $('obSt'); if (!el) return; el.textContent = msg; el.className = 'ob-st' + (tone ? ' '+tone : ''); const b = document.querySelector('#prMenus button[data-m="obs"]'); if (b) b.classList.toggle('live', !!obsS.on); }
+function obsSave(){ try{ localStorage.setItem(OBS_KEY, JSON.stringify(obsS)); }catch{} }
+function obsReq(type, data){ if (!obsReady || !obsWs) return; try{ obsWs.send(JSON.stringify({ op:6, d:{ requestType:type, requestId:'h'+(++obsMsgId), requestData:data } })); }catch{} }
+function obsDisconnect(){ clearTimeout(obsTimer); obsTimer = 0; const w = obsWs; obsWs = null; obsReady = false; if (w) { try{ w.onclose = null; w.close(); }catch{} } }
+function obsConnect(){
+  obsDisconnect(); obsFatal = false;
+  if (!obsS.on) { obsStatus('未开启'); return; }
+  let w; try{ w = new WebSocket(obsS.ws || OBS_DEF.ws); }catch{ obsStatus('OBS 地址格式不对，应类似 ws://127.0.0.1:4455', 'bad'); return; }
+  obsWs = w; obsStatus('正在连接 OBS…');
+  w.onmessage = async ev => {
+    let m; try{ m = JSON.parse(ev.data); }catch{ return; }
+    if (m.op===0) {
+      const id = { op:1, d:{ rpcVersion:1, eventSubscriptions:1 } };
+      if (m.d && m.d.authentication) {
+        if (!obsS.pw) { obsFatal = true; obsStatus('OBS 设了密码，请在上面填写 OBS 密码', 'bad'); return; }
+        try{ id.d.authentication = await obsAuth(obsS.pw, m.d.authentication.salt, m.d.authentication.challenge); }catch{ obsStatus('此环境无法计算 OBS 登录签名', 'bad'); return; }
+      }
+      w.send(JSON.stringify(id));
+    } else if (m.op===2) {
+      obsReady = true; obsStatus('已连接 OBS · 翻页会实时输出歌名和字幕', 'ok');
+      if (obsLast) obsSend(obsLast); else if (obsLastSt) obsPublish(obsLastSt, { keepTT:true });
+    } else if (m.op===5 && m.d && m.d.eventType==='CustomEvent') {
+      const d = m.d.eventData; if (d && d.t==='obsHello' && obsLast) obsSend(obsLast);
+    }
+  };
+  w.onclose = ev => {
+    if (obsWs !== w) return; obsWs = null; obsReady = false;
+    if (ev && ev.code===4009) { obsFatal = true; obsStatus('OBS 密码不对', 'bad'); return; }
+    if (obsFatal) return;
+    if (obsS.on) { obsStatus('连不上 OBS（请确认 OBS 已启用 WebSocket、地址和密码正确），3 秒后重试…', 'bad'); obsTimer = setTimeout(obsConnect, 3000); }
+  };
+  w.onerror = ()=>{};
+}
+function obsStyle(){ const o = {}; for (const k in obsS) if (!['pw','ws','on','sin','tin','credits'].includes(k)) o[k] = obsS[k]; return o; }
+function obsLoadCredit(t){ const m = (obsS.credits = obsS.credits || {}), c = m[t]; if (c) { obsS.cV1 = c[0]; obsS.cV2 = c[1]; } else if (obsS.cKeep===false) obsS.cV1 = obsS.cV2 = ''; else m[t] = [obsS.cV1||'', obsS.cV2||'']; obsSave(); ['cV1','cV2'].forEach(k=>{ const el = $('ob_'+k); if (el) el.value = obsS[k]; }); }
+let obsBlurTT = 0, obsBlurClr = 0;
+function obsSend(p){
+  if (obsBC) { try{ obsBC.postMessage(p); }catch{} }
+  obsReq('BroadcastCustomEvent', { eventData:p });
+  if (obsS.sin) { const t = (p.hide || !obsS.sub) ? '' : (p.text || p.msg || ''); obsReq('SetInputSettings', { inputName:obsS.sin, inputSettings:{ text:t }, overlay:true }); }
+  if (obsS.blurSrc && obsS.blurFlt) {
+    const set = v => obsReq('SetSourceFilterEnabled', { sourceName:obsS.blurSrc, filterName:obsS.blurFlt, filterEnabled:v });
+    if (p.hide || !obsS.title) { clearTimeout(obsBlurClr); set(false); }
+    else if (p.tt && p.tt!==obsBlurTT && p.title) { obsBlurTT = p.tt; set(true); clearTimeout(obsBlurClr); obsBlurClr = setTimeout(()=>set(false), (obsS.secs>0 ? obsS.secs : 5)*1000); }
+  }
+  if (obsS.tin) {
+    if (p.hide || !obsS.title) { clearTimeout(obsTxtClr); obsReq('SetInputSettings', { inputName:obsS.tin, inputSettings:{ text:'' }, overlay:true }); }
+    else if (p.tt && p.tt!==obsTxtTT && p.title) {
+      obsTxtTT = p.tt; obsReq('SetInputSettings', { inputName:obsS.tin, inputSettings:{ text:p.title }, overlay:true });
+      clearTimeout(obsTxtClr); if (obsS.secs>0) obsTxtClr = setTimeout(()=>obsReq('SetInputSettings', { inputName:obsS.tin, inputSettings:{ text:'' }, overlay:true }), obsS.secs*1000);
+    }
+  }
+}
+function obsPublish(st, opt){
+  opt = opt || {}; if (!st) return; obsLastSt = st;
+  if (!obsS.on && !opt.force) return;
+  const hide = !!(st.black || st.clear);
+  if (!opt.keepTT && !hide) { if (st.title && st.title!==obsLastTitle) { obsTT = Date.now(); obsLoadCredit(st.title); } obsLastTitle = st.title || ''; }
+  if (opt.retitle && st.title && !hide) obsTT = Date.now();
+  obsLast = { t:'obs', title:st.title||'', text:hide ? '' : (st.text||''), ref:hide ? '' : (st.ref||''), msg:hide ? '' : (st.msg||''), hide, tt:obsTT, style:obsStyle() };
+  obsSend(obsLast);
+}
+function obsUrl(){
+  const u = new URL('?obs=1', location.href);
+  if (obsS.ws && obsS.ws!==OBS_DEF.ws) u.searchParams.set('ws', obsS.ws);
+  if (obsS.pw) u.searchParams.set('pw', obsS.pw);
+  return u.href;
+}
+const OB_IDS = { on:['obOn','chk'], ws:['obWs'], pw:['obPw'], title:['obTitle','chk'], secs:['obSecs','num'], sub:['obSub','chk'], sAnchor:['obPos'], size:['obSize','num'], color:['obColor'], bar:['obBar','num'], font:['obFont'], bold:['obBold','chk'], sin:['obSin'], tin:['obTin'] };
+function obsFill(){ for (const [k,[id,t]] of Object.entries(OB_IDS)) { const el = $(id); if (!el) continue; if (t==='chk') el.checked = !!obsS[k]; else el.value = obsS[k]; } }
+function obsRead(e){
+  const was = { on:obsS.on, ws:obsS.ws, pw:obsS.pw };
+  for (const [k,[id,t]] of Object.entries(OB_IDS)) { const el = $(id); obsS[k] = t==='chk' ? el.checked : (t==='num' ? +el.value : el.value.trim()); }
+  if (obsLastTitle) { (obsS.credits = obsS.credits || {})[obsLastTitle] = [obsS.cV1, obsS.cV2]; }
+  obsSave();
+  if (obsS.on!==was.on) {
+    if (obsS.on) { obsLastTitle = ''; obsConnect(); obsPublish(obsLastSt || presState(), { force:true }); }
+    else { obsPublish(Object.assign({}, obsLastSt || presState(), { black:true }), { force:true, keepTT:true }); setTimeout(()=>{ if (!obsS.on) obsDisconnect(); }, 400); obsStatus('未开启'); }
+  } else if (obsS.on && (obsS.ws!==was.ws || obsS.pw!==was.pw)) { obsConnect(); }
+  else if (obsS.on && obsLastSt) obsPublish(obsLastSt, { keepTT:true });
+}
+(function(){
+  const AN='<option value="tl">左上</option><option value="tc">中上</option><option value="tr">右上</option><option value="bl">左下</option><option value="bc">中下</option><option value="br">右下</option>';
+  const FN='<option value="sans">黑体</option><option value="serif">宋体</option><option value="kai">楷体</option>';
+  const RG=(a,b,c)=>`type="range" min="${a}" max="${b}" step="${c}"`;
+  const G=[
+   ['歌名排版',[['tAnim','歌名动画','sel','<option value="blur">逐字模糊出现</option><option value="fade">整体淡入</option><option value="none">无动画</option>'],['tBlur','模糊程度','num',RG(2,30,1)],['tStep','逐字间隔','num',RG(20,200,5)],['tFont','字体','sel',FN],['tFf','自定义字体','txt','placeholder="电脑里装的字体名，如 思源宋体"'],['tSize','字号','num',RG(2,10,0.2)],['tColor','颜色','col',''],['tAnchor','位置','sel',AN],['tDx','左右微调','num',RG(-30,30,1)],['tDy','上下微调','num',RG(-20,30,1)]]],
+   ['署名（演唱 / 歌词制作，每首歌各记一份）',[['cOn','显示署名','chk',''],['cKeep','新歌沿用上一首','chk',''],['cFollow','跟在歌名下面','chk',''],['cL1','标签一','txt',''],['cV1','内容一','txt','placeholder="如 敬拜团队"'],['cL2','标签二','txt',''],['cV2','内容二','txt','placeholder="如 某某"'],['cFont','字体','sel',FN],['cFf','自定义字体','txt',''],['cSize','字号','num',RG(1.5,8,0.1)],['cColor','颜色','col',''],['cAnchor','独立显示时的位置（如画面底部）','sel',AN],['cDx','左右微调','num',RG(-30,30,1)],['cDy','上下微调','num',RG(-20,30,1)]]],
+   ['字幕补充',[['sFf','自定义字体','txt','placeholder="电脑里装的字体名"'],['sDx','左右微调','num',RG(-30,30,1)],['sDy','上下微调','num',RG(-20,30,1)]]],
+   ['现场画面模糊（歌名出现时，让 OBS 里的画面模糊）',[['blurSrc','画面来源名','txt','placeholder="OBS 里摄像头 / 场景的名称"'],['blurFlt','模糊滤镜名','txt','placeholder="你给它加的模糊滤镜的名称"']]]];
+  let h=''; for(const [t,rows] of G){ h+=`<div class="pr-sec">${t}</div><div class="pr-form">`; for(const [k,l,ty,x] of rows){ const id='ob_'+k; OB_IDS[k]=[id, ty==='chk'?'chk':ty==='num'?'num':'']; h+=`<label>${l}</label>`+(ty==='sel'?`<select id="${id}">${x}</select>`:ty==='chk'?`<input type="checkbox" id="${id}" style="width:auto">`:ty==='col'?`<input type="color" id="${id}">`:ty==='num'?`<input ${x} id="${id}">`:`<input id="${id}" ${x} autocomplete="off" spellcheck="false">`); } h+='</div>'; }
+  $('obLay').innerHTML=h;
+})();
+obsFill();
+Object.values(OB_IDS).forEach(([id])=>{ const el = $(id); if (el) el.addEventListener('input', obsRead); });
+$('obShowT').addEventListener('click', ()=>{ if (!obsS.on) { obsStatus('先打开「输出到 OBS」', 'bad'); return; } obsPublish(obsLastSt || presState(), { retitle:true, keepTT:true }); });
+$('obCopy').addEventListener('click', async ()=>{
+  const u = obsUrl();
+  try{ await navigator.clipboard.writeText(u); obsStatus('已复制：在 OBS 添加「浏览器」来源，网址粘贴即可。' + (location.protocol==='file:' ? '（本页是本地文件，OBS 里要用这个 file:/// 网址，不要勾「本地文件」）' : ''), 'ok'); }
+  catch{ window.prompt('复制这个网址，粘贴到 OBS 浏览器源：', u); }
+});
+if (obsS.on && !IS_OBS) { obsStatus('正在连接 OBS…'); obsConnect(); } else obsStatus('未开启');
+window.addEventListener('beforeunload', ()=>{ if (obsS.on && !IS_OBS) { try{ obsPublish(Object.assign({}, obsLastSt || {}, { black:true }), { force:true, keepTT:true }); }catch{} } });
+if (obsBC && !IS_OBS) obsBC.onmessage = e => { if (e.data && e.data.t==='obsHello' && obsLast && obsS.on) obsSend(obsLast); };
+
+/* ---- OBS 浏览器源（?obs=1）：只负责显示 ---- */
+(function(){
+  if (!IS_OBS) return;
+  const q = new URLSearchParams(location.search), R = $('obsOut'), T = $('obsTitle'), S = $('obsSub');
+  const wsUrl = q.get('ws') || 'ws://127.0.0.1:4455', pw = q.get('pw') || '';
+  document.title = 'OBS 字幕输出';
+  const TT = document.createElement('span'), C = document.createElement('div'); C.id = 'obsCred'; T.appendChild(TT); T.appendChild(C);
+  let cur = { st:{}, p:{} }, shown = '';
+  const fam = (f, ff) => (ff ? '"' + ff.replace(/"/g,'') + '",' : '') + (obsFam[f] || obsFam.sans);
+  function place(el, a, dx, dy){ const s = el.style, v = a[0]==='t' ? 'top' : 'bottom', h = a[1]; s.top = s.bottom = s.left = s.right = 'auto'; s.margin = '0'; s.width = 'max-content'; s.transform = 'none'; s[v] = (4 + dy) + 'vh'; if (h==='c') { s.left = s.right = '0'; s.margin = '0 auto'; s.transform = 'translateX(' + dx + 'vw)'; } else s[h==='l' ? 'left' : 'right'] = (3 + dx) + 'vw'; }
+  function layout(st){
+    const g = (k, d) => st[k]==null ? d : st[k];
+    T.style.fontFamily = fam(g('tFont','sans'), g('tFf','')); T.style.fontSize = g('tSize',4.8) + 'vh'; T.style.color = g('tColor','#fff'); place(T, g('tAnchor','tl'), g('tDx',0), g('tDy',0));
+    S.style.fontFamily = fam(g('font','sans'), g('sFf','')); S.style.fontSize = g('size',6) + 'vh'; S.style.color = g('color','#fff'); place(S, g('sAnchor','bc'), g('sDx',0), g('sDy',0));
+    C.style.fontFamily = fam(g('cFont','sans'), g('cFf','')); C.style.fontSize = g('cSize',3.2) + 'vh'; C.style.color = g('cColor','#dbe4f3');
+    const fol = st.cFollow!==false, par = fol ? T : R; if (C.parentNode!==par) par.appendChild(C);
+    if (fol) ['position','top','bottom','left','right','margin','transform','width'].forEach(k=>C.style[k]=''); else place(C, g('cAnchor','bl'), g('cDx',0), g('cDy',0));
+    T.style.transition = g('tAnim','blur')==='none' ? 'none' : '';
+  }
+  let lastTT = 0, hideT = 0, lastSub = null;
+  try{ lastTT = +localStorage.getItem('hymnObsTT') || 0; }catch{}
+  let dbg = null; if (q.has('debug')) { dbg = document.createElement('div'); dbg.id = 'obsDbg'; dbg.textContent = '等待连接…'; R.appendChild(dbg); }
+  const say = t => { if (dbg) dbg.textContent = t; };
+  function setTitle(t, force){
+    const st = cur.st;
+    if (!t) { shown = ''; T.classList.remove('on'); C.classList.remove('on'); return; }
+    if (t===shown && !force && T.classList.contains('on')) return;
+    shown = t;
+    const cr = []; if (st.cOn!==false) { if (st.cV1) cr.push((st.cL1||'') + st.cV1); if (st.cV2) cr.push((st.cL2||'') + st.cV2); }
+    C.textContent = cr.join('　　'); C.style.display = cr.length ? '' : 'none';
+    const an = st.tAnim || 'blur', B = +st.tBlur || 10, step = +st.tStep || 80;
+    TT.textContent = '';
+    [...('♪ ' + t)].forEach((ch, i) => { const e = document.createElement('span'); e.textContent = ch; if (an==='blur') { e.className = 'ob-ch'; e.style.setProperty('--b', (B * (0.4 + Math.random() * 1.2)).toFixed(1) + 'px'); e.style.animationDelay = Math.round(i * step + Math.random() * step * 0.8) + 'ms'; } TT.appendChild(e); });
+    T.classList.remove('on'); void T.offsetWidth; T.classList.add('on'); C.classList.add('on');
+  }
+  function apply(p){
+    if (!p || p.t!=='obs') return;
+    const st = p.style || {}, hide = !!p.hide; cur = { st, p };
+    R.style.setProperty('--fs', st.size || 6); R.style.setProperty('--c', st.color || '#fff');
+    R.style.setProperty('--bar', ((st.bar==null ? 55 : st.bar)/100).toFixed(2));
+    R.style.setProperty('--ff', obsFam[st.font] || obsFam.sans); R.style.setProperty('--fw', st.bold===false ? 400 : 700);
+    R.dataset.pos = 'b'; layout(st);
+    const txt = (!hide && st.sub!==false) ? (p.text || p.msg || '') : '';
+    const key = txt + '\u0001' + (p.ref||'');
+    if (key!==lastSub) {
+      lastSub = key;
+      S.innerHTML = txt ? escapeHtml(txt).replace(/\n/g, '<br>') + (p.ref ? '<small>' + escapeHtml(p.ref) + '</small>' : '') : '';
+      S.classList.toggle('on', !!txt);
+      if (txt) { S.classList.remove('pop'); void S.offsetWidth; S.classList.add('pop'); }
+    }
+    const want = st.title!==false && !!p.title && !hide, fresh = p.tt && p.tt!==lastTT;
+    if (+st.secs===0) setTitle(want ? p.title : '');
+    else if (!want) { clearTimeout(hideT); setTitle(''); }
+    else if (fresh) { setTitle(p.title, true); clearTimeout(hideT); hideT = setTimeout(()=>setTitle(''), (+st.secs || 8) * 1000); }
+    if (fresh) { lastTT = p.tt; try{ localStorage.setItem('hymnObsTT', String(lastTT)); }catch{} }
+  }
+  if (obsBC) { const bc = new BroadcastChannel('hymnObs'); bc.onmessage = e => apply(e.data); setTimeout(()=>{ try{ bc.postMessage({ t:'obsHello' }); }catch{} }, 300); }
+  function connect(){
+    let w; try{ w = new WebSocket(wsUrl); }catch{ say('地址无效'); return; }
+    w.onmessage = async ev => {
+      let m; try{ m = JSON.parse(ev.data); }catch{ return; }
+      if (m.op===0) {
+        const id = { op:1, d:{ rpcVersion:1, eventSubscriptions:1 } };
+        if (m.d && m.d.authentication) { try{ id.d.authentication = await obsAuth(pw, m.d.authentication.salt, m.d.authentication.challenge); }catch{} }
+        w.send(JSON.stringify(id));
+      } else if (m.op===2) {
+        say('已连接 OBS'); w.send(JSON.stringify({ op:6, d:{ requestType:'BroadcastCustomEvent', requestId:'hello', requestData:{ eventData:{ t:'obsHello' } } } }));
+      } else if (m.op===5 && m.d && m.d.eventType==='CustomEvent') { apply(m.d.eventData); }
+    };
+    w.onclose = ev => { say(ev && ev.code===4009 ? '密码不对（网址里 pw=）' : '未连接，3 秒后重试'); if (!(ev && ev.code===4009)) setTimeout(connect, 3000); };
+    w.onerror = ()=>{};
+  }
+  if (!q.has('nows')) connect();
+  if (q.has('demo')) {
+    document.documentElement.style.setProperty('background', 'repeating-conic-gradient(#3a3f4a 0 25%,#2c303a 0 50%) 0 0/32px 32px', 'important');
+    apply({ t:'obs', title:'奇异恩典', text:'奇异恩典 何等甘甜\n我罪已得赦免', ref:'', hide:false, tt:Date.now(), style:{ sub:true, title:true, secs:0, pos:'b', size:6, color:'#fff', bar:55, font:'sans', bold:true } });
+  }
+})();
+
 /* 网址带 ?lyric=1：打开页面就直接进入歌词投屏（桌面版启动用；网页版也可以把带这个参数的网址加书签） */
 if (!IS_RECV && !IS_STAGE && new URLSearchParams(location.search).has('lyric')) setTimeout(()=>{ try{ presOpen(); }catch(e){ console.error(e); } }, 0);
 
 if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) navigator.serviceWorker.register('sw.js').catch(()=>{});
 (async ()=>{
-  if (IS_RECV) return;   // 投屏接收端不需要初始化搜索功能
+  if (IS_RECV || IS_OBS) return;   // 投屏接收端 / OBS 输出页不需要初始化搜索功能
   loadSettings();
   BOOKFILE_P=loadBookFile();
   syncClear();
