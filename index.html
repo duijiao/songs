@@ -755,6 +755,30 @@ html.obs #obsOut{display:block;position:fixed;inset:0;pointer-events:none;color:
 .pp-role{display:flex;align-items:center;gap:.4em;font-size:1.5em;color:#f3d9a0}
 .pp-role svg{width:1em;height:1em}
 .pp-note{margin-left:2.8em;padding:.25em 2.4em .25em 1.8em;background:linear-gradient(90deg,#c99a44,#f6dc92 45%,#c99a44);color:#3a2408;font-weight:700;letter-spacing:.14em;font-size:1em;clip-path:polygon(.9em 0,100% 0,calc(100% - .9em) 100%,0 100%);width:max-content}
+
+/* ===== 手机版歌词投屏：歌词预览 + 顺序条 + 翻页键固定在顶部，其余内容在下面滚动；设置面板改成底部抽屉，不挡歌词 ===== */
+.pr-order{display:flex;gap:6px;overflow-x:auto;padding:7px 0 3px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.pr-order::-webkit-scrollbar{display:none}
+.pr-order button{flex:none;min-width:44px;padding:6px 12px;border-radius:999px;font-size:13px;font-weight:700;background:#2a2d33;color:#cbd5e1;border:1px solid #3a3e46;white-space:nowrap}
+.pr-order button.on{background:#2563eb;border-color:#60a5fa;color:#fff}
+.pr-order button.nx{background:transparent;border-style:dashed;color:#8ea0bd;font-weight:500}
+@media (max-width:899px){
+  #prMobHead{position:sticky;top:0;z-index:8;background:#0d1016;padding:6px 10px 8px;margin:0 -10px;box-shadow:0 8px 16px #000b}
+  #prMobHead .pr-pvwrap{width:min(100%,calc(24vh * 1.7778));margin:0 auto}
+  #prMobHead .pr-info{margin:2px 0 0;font-size:12px}
+  #prMobHead .pr-ctl{display:grid;grid-template-columns:1fr 1.5fr .8fr .8fr;gap:6px;margin-top:6px}
+  #prMobHead .pr-ctl button{height:46px;padding:0 4px;font-size:14px;white-space:nowrap}
+  .pr-pop,.pr-pop.wide{position:fixed!important;top:auto!important;left:0!important;right:0!important;bottom:0!important;width:100%!important;max-width:none!important;max-height:44vh!important;border-radius:14px 14px 0 0}
+}
+
+.pr-songsel{width:100%;margin-top:6px;height:38px;border-radius:10px;background:#1f2125;color:#e5e7eb;border:1px solid #3a3e46;padding:0 10px;font-size:14px}
+@media (max-width:899px){
+  .pr-left{display:contents}
+  .pr-main{gap:10px;padding:0 10px 28px;overflow-y:auto;-webkit-overflow-scrolling:touch}
+  .pr-main>*{flex:none}
+  .pr-main .pr-pane{flex:none!important;overflow:visible!important;min-height:0}
+  #prMobHead .pr-pvwrap{width:min(100%,calc(20vh * 1.7778))}
+}
 </style>
 <script>var IDLE_SVG='<svg class="idle-ico" viewBox="0 0 48 48" fill="none" aria-hidden="true"><rect x="4" y="4" width="40" height="40" rx="11" fill="currentColor" opacity=".12"/><path d="M19 32V15l13-3v17" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><circle cx="16" cy="33" r="4" fill="currentColor"/><circle cx="29" cy="30" r="4" fill="currentColor"/></svg>';
 function ssFallback(img){ img.onerror=null; img.outerHTML=IDLE_SVG; }   // ss.png 不存在时换成内置图标
@@ -3485,6 +3509,7 @@ function presRenderSlides(){
   $('prSlides').innerHTML = html || '<div class="hint" style="color:#8ea0bd">这首歌没有可显示的幻灯片：请检查分段标记和演唱顺序，或点上方「＋ 新增」自己加一页。</div>';
   $('prSlides').querySelectorAll('img[data-d]').forEach(im=>pptUrl(im.dataset.d, +im.dataset.x).then(u=>{ im.src = u; }));
   const on = $('prSlides').querySelector('.pr-card.on'); if (on) on.scrollIntoView({ block:'nearest' });
+  try{ prOrderRender(); }catch{}
 }
 $('prSlides').addEventListener('click', e=>{ const c = e.target.closest('.pr-card'); if (c) { pres.mode='lyric'; presGo(+c.dataset.i); } });
 $('prAddMan').addEventListener('click', ()=>{
@@ -6093,6 +6118,38 @@ if (GUIDE_FIRST && !IS_RECV && !IS_OBS && !new URLSearchParams(location.search).
 })();
 
 
+
+/* ---- 手机版：顺序条 + 固定在顶部的歌词预览/翻页区 ---- */
+function prOrderRender(){
+  const ss = $('prSongSel'); if (ss) ss.innerHTML = pres.list.map((x,i)=>`<option value="${i}"${i===pres.sel ? ' selected' : ''}>${i+1}. ${annEsc(x.title)}</option>`).join('') || '<option>歌单是空的</option>';
+  const st = $('prOrder'); if (!st) return;
+  const it = pres.list[pres.sel];
+  if (!it || !pres.slides || !pres.slides.length) { st.innerHTML = '<span class="hint" style="color:#8ea0bd">先添加歌曲</span>'; return; }
+  const sl = pres.slides; let h = '';
+  for (let i = 0; i < sl.length; ) {
+    let j = i; while (j + 1 < sl.length && sl[j+1].label === sl[i].label) j++;
+    for (let k = i; k <= j; k++) h += `<button type="button" data-i="${k}"${k===pres.cur ? ' class="on"' : ''}>${annEsc(sl[i].label)}${j>i ? ' ' + (k-i+1) : ''}</button>`;
+    i = j + 1;
+  }
+  const nx = pres.list[pres.sel+1]; if (nx) h += `<button type="button" class="nx" data-next="1">下一首 › ${annEsc(nx.title)}</button>`;
+  st.innerHTML = h;
+  const on = st.querySelector('.on'); if (on) st.scrollLeft = on.offsetLeft - st.clientWidth/2 + on.offsetWidth/2;
+}
+(function(){
+  const mq = matchMedia('(max-width:899px)'), wrap = document.createElement('div'), strip = document.createElement('div'); let marks = null;
+  wrap.id = 'prMobHead'; strip.id = 'prOrder'; strip.className = 'pr-order';
+  const sel = document.createElement('select'); sel.id = 'prSongSel'; sel.className = 'pr-songsel';
+  sel.addEventListener('change', () => { pres.mode = 'lyric'; pres.sel = +sel.value; presRegen(); presGo(0); });
+  strip.addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; pres.mode = 'lyric'; presGo(b.dataset.next ? pres.slides.length : +b.dataset.i); });
+  function sync(){
+    const left = document.querySelector('.pr-left'); if (!left) return;
+    const pv = $('prPvWrap'), info = $('prInfo'), ctl = left.querySelector('.pr-ctl');
+    if (mq.matches) { if (wrap.parentNode) return; marks = [pv, info, ctl].map(e => ({ e, p:e.parentNode, n:e.nextSibling })); left.insertBefore(wrap, left.firstChild); wrap.append(pv, sel, strip, info, ctl); try{ prOrderRender(); }catch{} }
+    else if (wrap.parentNode) { marks.reverse().forEach(m => m.p.insertBefore(m.e, m.n)); wrap.remove(); }
+  }
+  (mq.addEventListener ? mq.addEventListener('change', sync) : mq.addListener(sync)); sync();
+})();
+
 /* ============== OBS 直播：歌名 + 实时字幕 ==============
    主控端（这个页面）每次翻页 / 换歌 / 黑屏，都会把当前状态发给 OBS：
    · 浏览器源（网址带 ?obs=1）：通过 OBS WebSocket 的自定义事件收到，也可走同浏览器的 BroadcastChannel
@@ -6174,7 +6231,7 @@ function obsSend(p){
   }
 }
 function obsPublish(st, opt){
-  opt = opt || {}; if (!st) return; obsLastSt = st;
+  opt = opt || {}; if (!st) return; if (!opt.temp) obsLastSt = st;
   if (!obsS.on && !opt.force) return;
   const hide = !!(st.black || st.clear);
   if (!opt.keepTT && !hide) { if (st.title && st.title!==obsLastTitle) { obsTT = Date.now(); obsLoadCredit(st.title); } obsLastTitle = st.title || ''; }
@@ -6197,7 +6254,7 @@ function obsRead(e){
   obsSave();
   if (obsS.on!==was.on) { if (!obsS.on) obsPShow = false;
     if (obsS.on) { obsLastTitle = ''; obsConnect(); obsPublish(obsLastSt || presState(), { force:true }); }
-    else { obsPublish(Object.assign({}, obsLastSt || presState(), { black:true }), { force:true, keepTT:true }); setTimeout(()=>{ if (!obsS.on) obsDisconnect(); }, 400); obsStatus('未开启'); }
+    else { obsPublish(Object.assign({}, obsLastSt || presState(), { black:true }), { force:true, keepTT:true, temp:true }); setTimeout(()=>{ if (!obsS.on) obsDisconnect(); }, 400); obsStatus('未开启'); }
   } else if (obsS.on && (obsS.ws!==was.ws || obsS.pw!==was.pw)) { obsConnect(); }
   else if (obsS.on && obsLastSt) obsPublish(obsLastSt, { keepTT:true });
 }
@@ -6224,7 +6281,7 @@ $('obCopy').addEventListener('click', async ()=>{
   catch{ window.prompt('复制这个网址，粘贴到 OBS 浏览器源：', u); }
 });
 if (obsS.on && !IS_OBS) { obsStatus('正在连接 OBS…'); obsConnect(); } else obsStatus('未开启');
-window.addEventListener('beforeunload', ()=>{ if (obsS.on && !IS_OBS) { try{ obsPublish(Object.assign({}, obsLastSt || {}, { black:true }), { force:true, keepTT:true }); }catch{} } });
+window.addEventListener('beforeunload', ()=>{ if (obsS.on && !IS_OBS) { try{ obsPublish(Object.assign({}, obsLastSt || {}, { black:true }), { force:true, keepTT:true, temp:true }); }catch{} } });
 if (obsBC && !IS_OBS) obsBC.onmessage = e => { if (e.data && e.data.t==='obsHello' && obsLast && obsS.on) obsSend(obsLast); };
 
 /* ---- OBS 浏览器源（?obs=1）：只负责显示 ---- */
@@ -6275,7 +6332,7 @@ if (obsBC && !IS_OBS) obsBC.onmessage = e => { if (e.data && e.data.t==='obsHell
   }
   function apply(p){
     if (!p || p.t!=='obs') return;
-    const st = p.style || {}, hide = !!p.hide; cur = { st, p };
+    const st = p.style || {}, hide = !!p.hide; cur = { st, p }; say('收到：人物条=' + (p.pp ? '开' : '关') + '，姓名=' + (st.pName || '空'));
     R.style.setProperty('--fs', st.size || 6); R.style.setProperty('--c', st.color || '#fff');
     R.style.setProperty('--bar', ((st.bar==null ? 55 : st.bar)/100).toFixed(2));
     R.style.setProperty('--ff', obsFam[st.font] || obsFam.sans); R.style.setProperty('--fw', st.bold===false ? 400 : 700);
@@ -6314,7 +6371,7 @@ if (obsBC && !IS_OBS) obsBC.onmessage = e => { if (e.data && e.data.t==='obsHell
   if (!q.has('nows')) connect();
   if (q.has('demo')) {
     document.documentElement.style.setProperty('background', 'repeating-conic-gradient(#3a3f4a 0 25%,#2c303a 0 50%) 0 0/32px 32px', 'important');
-    apply({ t:'obs', title:'奇异恩典', text:'奇异恩典 何等甘甜\n我罪已得赦免', ref:'', hide:false, tt:Date.now(), style:{ sub:true, title:true, secs:0, pos:'b', size:6, color:'#fff', bar:55, font:'sans', bold:true } });
+    apply({ t:'obs', title:'奇异恩典', text:'奇异恩典 何等甘甜\n我罪已得赦免', ref:'', hide:false, pp:q.has('person'), tt:Date.now(), style:{ pName:'张恩泽', pRole:'牧师', pNote:'本次讲道 · 讲员介绍', sub:true, title:true, secs:0, pos:'b', size:6, color:'#fff', bar:55, font:'sans', bold:true } });
   }
 })();
 
