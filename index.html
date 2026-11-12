@@ -6148,7 +6148,14 @@ function obsConnect(){
 function obsStyle(){ const o = {}; for (const k in obsS) if (!['pw','ws','on','sin','tin','credits'].includes(k)) o[k] = obsS[k]; return o; }
 function obsLoadCredit(t){ const m = (obsS.credits = obsS.credits || {}), c = m[t]; if (c) { obsS.cV1 = c[0]; obsS.cV2 = c[1]; } else if (obsS.cKeep===false) obsS.cV1 = obsS.cV2 = ''; else m[t] = [obsS.cV1||'', obsS.cV2||'']; obsSave(); ['cV1','cV2'].forEach(k=>{ const el = $('ob_'+k); if (el) el.value = obsS[k]; }); }
 let obsBlurTT = 0, obsBlurClr = 0, obsPShow = false, obsPClr = 0;
-function obsPerson(on){ if (!obsS.on) { obsStatus('先打开「输出到 OBS」', 'bad'); return; } obsPShow = on; clearTimeout(obsPClr); if (on && obsS.pSecs>0) obsPClr = setTimeout(()=>obsPerson(false), obsS.pSecs*1000); obsPublish(obsLastSt || presState(), { keepTT:true }); }
+function obsPerson(on){
+  if (!obsS.on) { obsStatus('先打开「输出到 OBS」', 'bad'); return; }
+  if (on && !obsS.pName) { obsStatus('请先在「人物介绍条」里填写姓名', 'bad'); return; }
+  obsPShow = on; clearTimeout(obsPClr); if (on && obsS.pSecs>0) obsPClr = setTimeout(()=>obsPerson(false), obsS.pSecs*1000);
+  let st = obsLastSt; if (!st) { try{ st = presState(); }catch{ st = { title:'', text:'' }; } }
+  obsPublish(st, { keepTT:true });
+  obsStatus(on ? '人物条已发送' + (obsS.pSecs>0 ? '，' + obsS.pSecs + ' 秒后自动隐藏' : '') : '人物条已隐藏', 'ok');
+}
 function obsSend(p){
   if (obsBC) { try{ obsBC.postMessage(p); }catch{} }
   obsReq('BroadcastCustomEvent', { eventData:p });
